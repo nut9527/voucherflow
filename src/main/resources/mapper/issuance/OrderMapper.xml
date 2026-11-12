@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.voucherflow.issuance.mapper.OrderMapper">
+
+    <!-- 券使用左连接，使尚未完成或失败的订单也能返回查询视图。 -->
+    <sql id="viewColumns">
+        o.id AS order_id, o.campaign_id, o.user_id, c.name AS campaign_name, o.status,
+        v.id AS voucher_id, o.expires_at, o.created_at, o.completed_at
+    </sql>
+    <sql id="viewFrom">fulfillment_orders o JOIN campaigns c ON c.id=o.campaign_id LEFT JOIN user_vouchers v ON v.order_id=o.id</sql>
+    <!-- 供应商订单等待消息登记任务；本地订单不需要异步任务，由领取事务直接完成。 -->
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO fulfillment_orders(request_no,campaign_id,user_id,fulfillment_mode,supplier_id,product_code,
+            status,revision,expires_at,created_at,request_fingerprint,idempotency_deadline_at,contract_version,subject_ref,job_state)
+        VALUES(#{requestNo},#{campaignId},#{userId},#{fulfillmentMode},#{supplierId},#{productCode},
+            'PENDING',0,#{expiresAt},UTC_TIMESTAMP(3),#{requestFingerprint},#{idempotencyDeadlineAt},#{contractVersion},#{subjectRef},
+            CASE WHEN #{fulfillmentMode}='SUPPLIER' THEN 'WAITING_EVENT' ELSE 'DONE' END)
+    </insert>
+    <select id="lockById" resultType="com.example.voucherflow.issuance.model.OrderRow">
+        SELECT * FROM fulfillment_orders WHERE id=#{id} FOR UPDATE
+    </select>
+    <select id="findByCampaignAndUser" resultType="com.example.voucherflow.issuance.model.OrderView">
+        SELECT <include refid="viewColumns"/> FROM <include refid="viewFrom"/>
+        WHERE o.campaign_id=#{campaignId} AND o.user_id=#{userId}
+    </select>
+    <select id="findById" resultType="com.example.voucherflow.issuance.model.OrderView">
+        SELECT <include refid="viewColumns"/> FROM <include refid="viewFrom"/> WHERE o.id=#{id}
+    </select>
+    <select id="findOwned" resultType="com.example.voucherflow.issuance.model.OrderView">
+        SELECT <include refid="viewColumns"/> FROM <include refid="viewFrom"/> WHERE o.id=#{id} AND o.user_id=#{userId}
+    </select>
+    <select id="findOwnedPage" resultType="com.example.voucherflow.issuance.model.OrderView">
+        SELECT <include refid="viewColumns"/> FROM <include refid="viewFrom"/>
+        WHERE o.user_id=#{userId} AND o.id&gt;#{afterId} ORDER BY o.id LIMIT #{limit}
+    </select>
+    <!-- 仅非终态订单可完成发放，同时推进版本，供后续对账修复识别状态变化。 -->
+    <update id="markFulfilled">
+        UPDATE fulfillment_orders SET status='FULFILLED',revision=revision+1,completed_at=UTC_TIMESTAMP(3)
+        WHERE id=#{id} AND status IN ('PENDING','UNKNOWN')
+    </update>
+</mapper>

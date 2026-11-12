@@ -1,0 +1,71 @@
+services:
+  supplier-db:
+    profiles: [supplier, linux]
+  namesrv:
+    profiles: [messaging, linux]
+  broker-storage:
+    profiles: [messaging, linux]
+  broker:
+    profiles: [messaging, linux]
+    volumes:
+      - ./deploy/rocketmq/broker-container.conf:/home/rocketmq/broker.conf:ro
+  supplier:
+    profiles: [linux]
+    image: voucherflow-supplier:local
+    build:
+      context: ./supplier-simulator
+    ports:
+      - "127.0.0.1:8090:8090"
+    environment:
+      VF_SUPPLIER_PORT: "8090"
+      VF_SUPPLIER_DB_HOST: supplier-db
+      VF_SUPPLIER_DB_PORT: "3306"
+      VF_SUPPLIER_DB_NAME: vf_supplier
+      VF_SUPPLIER_DB_USER: vf_supplier
+      VF_SUPPLIER_DB_PASSWORD: ${VF_SUPPLIER_DB_PASSWORD:?Run scripts/setup-local.ps1}
+      VF_SUPPLIER_API_TOKEN: ${VF_SUPPLIER_API_TOKEN:?Run scripts/setup-local.ps1}
+      VF_SUPPLIER_CALLBACK_SECRET: ${VF_SUPPLIER_CALLBACK_SECRET:?Run scripts/setup-local.ps1}
+      VF_SUPPLIER_CALLBACK_URL: http://app:8080/api/supplier/callbacks
+      VF_SUPPLIER_FAULTS_ENABLED: ${VF_SUPPLIER_FAULTS_ENABLED:-false}
+    depends_on:
+      supplier-db:
+        condition: service_healthy
+    stop_grace_period: 20s
+  app:
+    profiles: [linux]
+    image: voucherflow:local
+    build:
+      context: .
+    ports:
+      - "127.0.0.1:8080:8080"
+    environment:
+      SPRING_PROFILES_ACTIVE: local
+      VF_PORT: "8080"
+      VF_DB_HOST: mysql
+      VF_DB_PORT: "3306"
+      VF_DB_NAME: voucherflow
+      VF_DB_USER: vf_app
+      VF_DB_PASSWORD: ${VF_DB_PASSWORD:?Run scripts/setup-local.ps1}
+      VF_REDIS_HOST: redis
+      VF_REDIS_PORT: "6379"
+      VF_CACHE_ENABLED: "true"
+      VF_RATE_LIMIT_ENABLED: "true"
+      VF_MESSAGING_ENABLED: "true"
+      VF_MESSAGING_PUBLISHING_ENABLED: "true"
+      VF_MQ_ENDPOINTS: broker:8081
+      VF_SUPPLIER_ENABLED: "true"
+      VF_SUPPLIER_URL: http://supplier:8090
+      VF_SUPPLIER_API_TOKEN: ${VF_SUPPLIER_API_TOKEN:?Run scripts/setup-local.ps1}
+      VF_SUPPLIER_CALLBACK_SECRET: ${VF_SUPPLIER_CALLBACK_SECRET:?Run scripts/setup-local.ps1}
+      VF_DEMO_ADMIN_PASSWORD: ${VF_DEMO_ADMIN_PASSWORD:?Run scripts/setup-local.ps1}
+      VF_DEMO_USER_PASSWORD: ${VF_DEMO_USER_PASSWORD:?Run scripts/setup-local.ps1}
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      broker:
+        condition: service_started
+      supplier:
+        condition: service_started
+    stop_grace_period: 45s

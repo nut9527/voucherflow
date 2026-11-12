@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.voucherflow.inventory.mapper.InventoryMapper">
+
+    <!-- 在一次更新中校验活动状态、领取窗口与余量，原子地把可用库存转为预留。 -->
+    <update id="reserve">
+        UPDATE campaigns SET available_stock=available_stock-1,reserved_stock=reserved_stock+1,updated_at=UTC_TIMESTAMP(3)
+        WHERE id=#{campaignId} AND status='ACTIVE' AND start_at&lt;=UTC_TIMESTAMP(3)
+            AND end_at&gt;UTC_TIMESTAMP(3) AND available_stock&gt;0
+    </update>
+    <!-- 发放成功后把预留转为已发放，与订单终态和库存流水同事务提交。 -->
+    <update id="confirm">
+        UPDATE campaigns SET reserved_stock=reserved_stock-1,issued_stock=issued_stock+1,updated_at=UTC_TIMESTAMP(3)
+        WHERE id=#{campaignId} AND reserved_stock&gt;0
+    </update>
+    <!-- 明确发放失败后归还预留，三类库存之和保持不变。 -->
+    <update id="release">
+        UPDATE campaigns SET reserved_stock=reserved_stock-1,available_stock=available_stock+1,updated_at=UTC_TIMESTAMP(3)
+        WHERE id=#{campaignId} AND reserved_stock&gt;0
+    </update>
+    <!-- 返回数据库观察时间，供预留失败后的业务原因判断使用。 -->
+    <select id="diagnoseAvailability" resultType="com.example.voucherflow.inventory.mapper.InventoryMapper$Availability">
+        SELECT status,start_at,end_at,available_stock,UTC_TIMESTAMP(3) AS observed_at FROM campaigns WHERE id=#{campaignId}
+    </select>
+</mapper>

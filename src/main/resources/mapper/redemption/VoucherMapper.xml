@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.voucherflow.redemption.mapper.VoucherMapper">
+
+    <sql id="view">SELECT v.*,c.name AS campaign_name FROM user_vouchers v JOIN campaigns c ON c.id=v.campaign_id</sql>
+    <!-- 券随订单履约成功创建，供应商模式额外保存外部券引用。 -->
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO user_vouchers(order_id,campaign_id,user_id,status,issued_at,expires_at,supplier_voucher_ref)
+        VALUES(#{orderId},#{campaignId},#{userId},'UNUSED',UTC_TIMESTAMP(3),#{expiresAt},#{supplierVoucherRef})
+    </insert>
+    <!-- 核销前取得券行锁，让并发请求按顺序读取并更新同一张券。 -->
+    <select id="lockById" resultType="com.example.voucherflow.redemption.model.VoucherRow">
+        SELECT * FROM user_vouchers WHERE id=#{id} FOR UPDATE
+    </select>
+    <select id="findById" resultType="com.example.voucherflow.redemption.model.VoucherRow">
+        <include refid="view"/> WHERE v.id=#{id}
+    </select>
+    <select id="findByOrderId" resultType="com.example.voucherflow.redemption.model.VoucherRow">
+        <include refid="view"/> WHERE v.order_id=#{orderId}
+    </select>
+    <select id="findOwned" resultType="com.example.voucherflow.redemption.model.VoucherRow">
+        <include refid="view"/> WHERE v.id=#{id} AND v.user_id=#{userId}
+    </select>
+    <select id="findOwnedPage" resultType="com.example.voucherflow.redemption.model.VoucherRow">
+        <include refid="view"/> WHERE v.user_id=#{userId} AND v.id&gt;#{afterId} ORDER BY v.id LIMIT #{limit}
+    </select>
+    <!-- 数据库时间是核销有效期的判定依据，到达截止时刻即不再允许使用。 -->
+    <update id="markUsedIfValid">
+        UPDATE user_vouchers SET status='USED',used_at=UTC_TIMESTAMP(3)
+        WHERE id=#{id} AND status='UNUSED' AND expires_at&gt;UTC_TIMESTAMP(3)
+    </update>
+    <select id="databaseNow" resultType="java.time.Instant">SELECT UTC_TIMESTAMP(3)</select>
+</mapper>

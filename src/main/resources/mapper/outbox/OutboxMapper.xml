@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.voucherflow.outbox.mapper.OutboxMapper">
+
+    <!-- 事件随业务事务写入，提交后由发布器领取并发送。 -->
+    <insert id="insert">
+        INSERT INTO outbox_events(id,event_type,aggregate_type,aggregate_id,payload,state,attempt_count,next_attempt_at,created_at)
+        VALUES(#{event.eventId},#{event.eventType},#{event.aggregateType},#{event.aggregateId},#{payload},
+            'PENDING',0,UTC_TIMESTAMP(3),UTC_TIMESTAMP(3))
+    </insert>
+</mapper>

@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.voucherflow.inventory.mapper.LedgerMapper">
+
+    <!-- 增减量由流水类型提供；表上唯一约束限制同一订单重复记账或同时确认、释放。 -->
+    <insert id="insert">
+        INSERT INTO stock_ledger(order_id,campaign_id,entry_type,delta_available,delta_reserved,delta_issued,created_at)
+        VALUES(#{orderId},#{campaignId},#{type},#{type.deltaAvailable},#{type.deltaReserved},#{type.deltaIssued},UTC_TIMESTAMP(3))
+    </insert>
+</mapper>

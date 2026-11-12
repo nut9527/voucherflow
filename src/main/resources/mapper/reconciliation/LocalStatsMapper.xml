@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.voucherflow.reconciliation.mapper.LocalStatsMapper">
+    <!-- 以下统计由服务层在同一数据库快照内读取，数量与库存、流水逐项核对。 -->
+    <select id="orderCounts" resultType="com.example.voucherflow.reconciliation.mapper.LocalStatsMapper$OrderCounts">
+        SELECT COALESCE(SUM(status='PENDING'),0) AS pending, COALESCE(SUM(status='UNKNOWN'),0) AS unknown,
+            COALESCE(SUM(status='FULFILLED'),0) AS fulfilled, COALESCE(SUM(status='FAILED'),0) AS failed
+        FROM fulfillment_orders WHERE campaign_id=#{campaignId}
+    </select>
+    <!-- 同时统计流水条数和三类库存增量，核对操作数量及库存变化是否一致。 -->
+    <select id="ledgerTotals" resultType="com.example.voucherflow.reconciliation.mapper.LocalStatsMapper$LedgerTotals">
+        SELECT COALESCE(SUM(entry_type='RESERVE'),0) AS reserves, COALESCE(SUM(entry_type='CONFIRM'),0) AS confirms,
+            COALESCE(SUM(entry_type='RELEASE'),0) AS releases,
+            COALESCE(SUM(delta_available),0) AS available_delta, COALESCE(SUM(delta_reserved),0) AS reserved_delta,
+            COALESCE(SUM(delta_issued),0) AS issued_delta
+        FROM stock_ledger WHERE campaign_id=#{campaignId}
+    </select>
+    <select id="voucherCounts" resultType="com.example.voucherflow.reconciliation.mapper.LocalStatsMapper$VoucherCounts">
+        SELECT COUNT(*) AS vouchers,COALESCE(SUM(status='USED'),0) AS used FROM user_vouchers WHERE campaign_id=#{campaignId}
+    </select>
+    <select id="redemptionCount" resultType="long">
+        SELECT COUNT(*) FROM redemption_records r JOIN user_vouchers v ON v.id=r.voucher_id WHERE v.campaign_id=#{campaignId}
+    </select>
+    <!-- 除总量守恒外，还检查订单、流水、券和核销回执之间的一对一业务关系。 -->
+    <select id="brokenLinks" resultType="long">
+        SELECT
+        (SELECT COUNT(*) FROM fulfillment_orders o WHERE o.campaign_id=#{campaignId} AND (
+            (SELECT COUNT(*) FROM stock_ledger l WHERE l.order_id=o.id AND l.entry_type='RESERVE') != 1
+            OR EXISTS(SELECT 1 FROM stock_ledger l WHERE l.order_id=o.id AND l.campaign_id != o.campaign_id)
+            OR (o.status='FULFILLED' AND (
+                (SELECT COUNT(*) FROM stock_ledger l WHERE l.order_id=o.id AND l.entry_type='CONFIRM') != 1
+                OR EXISTS(SELECT 1 FROM stock_ledger l WHERE l.order_id=o.id AND l.entry_type='RELEASE')
+                OR (SELECT COUNT(*) FROM user_vouchers v WHERE v.order_id=o.id) != 1))
+            OR (o.status='FAILED' AND (
+                (SELECT COUNT(*) FROM stock_ledger l WHERE l.order_id=o.id AND l.entry_type='RELEASE') != 1
+                OR EXISTS(SELECT 1 FROM stock_ledger l WHERE l.order_id=o.id AND l.entry_type='CONFIRM')
+                OR EXISTS(SELECT 1 FROM user_vouchers v WHERE v.order_id=o.id)))
+            OR (o.status IN ('PENDING','UNKNOWN') AND (
+                EXISTS(SELECT 1 FROM stock_ledger l WHERE l.order_id=o.id AND l.entry_type IN ('CONFIRM','RELEASE'))
+                OR EXISTS(SELECT 1 FROM user_vouchers v WHERE v.order_id=o.id)))
+            <!-- 供应商终态必须有对应证据；人工修复还需要关联已完成的修复命令。 -->
+            OR (o.fulfillment_mode='SUPPLIER' AND o.status IN ('FULFILLED','FAILED') AND NOT EXISTS (
+                SELECT 1 FROM stock_ledger l JOIN supplier_receipts r ON r.id=l.source_receipt_id
+                WHERE l.order_id=o.id AND r.order_id=o.id AND r.supplier_id=o.supplier_id
+                    AND r.request_no=o.request_no AND r.product_code=o.product_code AND r.subject_ref=o.subject_ref
+                    AND r.id=o.last_accepted_receipt_id AND r.result_version=o.last_result_version AND r.apply_state='APPLIED'
+                    AND ((o.status='FULFILLED' AND l.entry_type='CONFIRM' AND r.status='SUCCEEDED'
+                        AND EXISTS(SELECT 1 FROM user_vouchers v WHERE v.order_id=o.id AND v.supplier_voucher_ref=r.voucher_ref))
+                        OR (o.status='FAILED' AND l.entry_type='RELEASE' AND r.status='REJECTED' AND r.voucher_ref IS NULL))
+                    AND ((r.source IN ('WORKER','CALLBACK') AND l.repair_command_id IS NULL)
+                        OR (r.source='REPAIR_QUERY' AND EXISTS(
+                            SELECT 1 FROM repair_commands rc WHERE rc.command_id=l.repair_command_id
+                                AND rc.order_id=o.id AND rc.result IS NOT NULL
+                                AND rc.operation=CASE WHEN o.status='FULFILLED' THEN 'CONFIRM' ELSE 'RELEASE' END)))
+            ))
+        )) +
+        (SELECT COUNT(*) FROM user_vouchers v JOIN fulfillment_orders o ON o.id=v.order_id
+            WHERE (v.campaign_id=#{campaignId} OR o.campaign_id=#{campaignId}) AND (
+                v.campaign_id != o.campaign_id OR v.user_id != o.user_id OR v.expires_at != o.expires_at OR o.status != 'FULFILLED'
+                OR (v.status='USED' AND (SELECT COUNT(*) FROM redemption_records r WHERE r.voucher_id=v.id) != 1)
+                OR (v.status='UNUSED' AND EXISTS(SELECT 1 FROM redemption_records r WHERE r.voucher_id=v.id))
+        ))
+    </select>
+    <select id="databaseNow" resultType="java.time.Instant">SELECT UTC_TIMESTAMP(3)</select>
+</mapper>

@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.voucherflow.redemption.mapper.RedemptionMapper">
+
+    <!-- 每张券只有一条核销记录，重复核销直接读取该回执。 -->
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO redemption_records(voucher_id,operator_id,created_at) VALUES(#{voucherId},#{operatorId},UTC_TIMESTAMP(3))
+    </insert>
+    <select id="findByVoucherId" resultType="com.example.voucherflow.redemption.model.RedemptionRow">
+        SELECT * FROM redemption_records WHERE voucher_id=#{voucherId}
+    </select>
+</mapper>

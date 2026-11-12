@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.voucherflow.campaign.mapper.CampaignMapper">
+    <!-- 活动状态与库存统一映射，管理操作和领取事务使用同一活动记录。 -->
+    <resultMap id="campaign" type="com.example.voucherflow.campaign.model.CampaignRow">
+        <id column="id" property="id"/>
+        <result column="name" property="name"/>
+        <result column="description" property="description"/>
+        <result column="total_stock" property="totalStock"/>
+        <result column="available_stock" property="availableStock"/>
+        <result column="reserved_stock" property="reservedStock"/>
+        <result column="issued_stock" property="issuedStock"/>
+        <result column="status" property="status"/>
+        <result column="start_at" property="startAt"/>
+        <result column="end_at" property="endAt"/>
+        <result column="redeem_end_at" property="redeemEndAt"/>
+        <result column="fulfillment_mode" property="fulfillmentMode"/>
+        <result column="supplier_id" property="supplierId"/>
+        <result column="product_code" property="productCode"/>
+        <result column="contract_version" property="contractVersion"/>
+        <result column="created_by" property="createdBy"/>
+        <result column="created_at" property="createdAt"/>
+        <result column="updated_at" property="updatedAt"/>
+    </resultMap>
+
+    <insert id="insertDraft" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO campaigns
+            (name,description,total_stock,available_stock,reserved_stock,issued_stock,status,
+             start_at,end_at,redeem_end_at,fulfillment_mode,supplier_id,product_code,contract_version,
+             created_by,created_at,updated_at)
+        VALUES (#{name},#{description},#{totalStock},#{totalStock},0,0,'DRAFT',
+                #{startAt},#{endAt},#{redeemEndAt},#{fulfillmentMode},#{supplierId},#{productCode},
+                #{contractVersion},#{createdBy},UTC_TIMESTAMP(3),UTC_TIMESTAMP(3))
+    </insert>
+    <!-- 仅草稿可重设总库存，此时全部库存仍为可用库存。 -->
+    <update id="updateDraft">
+        UPDATE campaigns
+        SET name=#{params.name},description=#{params.description},
+            total_stock=#{params.totalStock},available_stock=#{params.totalStock},
+            start_at=#{params.startAt},end_at=#{params.endAt},redeem_end_at=#{params.redeemEndAt},
+            fulfillment_mode=#{params.fulfillmentMode},supplier_id=#{params.supplierId},
+            product_code=#{params.productCode},contract_version=#{params.contractVersion},
+            updated_at=UTC_TIMESTAMP(3)
+        WHERE id=#{id} AND status='DRAFT'
+    </update>
+    <select id="findById" resultMap="campaign">
+        SELECT * FROM campaigns WHERE id=#{id}
+    </select>
+    <!-- 行锁将同一活动的管理操作与库存变化串行化，锁在调用方事务结束时释放。 -->
+    <select id="lockById" resultMap="campaign">
+        SELECT * FROM campaigns WHERE id=#{id} FOR UPDATE
+    </select>
+    <!-- 公开查询隐藏草稿，已停用或已结束的活动仍可展示。 -->
+    <select id="findPublicById" resultMap="campaign">
+        SELECT * FROM campaigns WHERE id=#{id} AND status != 'DRAFT'
+    </select>
+    <!-- 以活动编号作游标，服务层多取一条判断是否存在下一页。 -->
+    <select id="findPublicPage" resultMap="campaign">
+        SELECT * FROM campaigns WHERE id &gt; #{afterId} AND status != 'DRAFT'
+        ORDER BY id ASC LIMIT #{limit}
+    </select>
+    <select id="findAdminPage" resultMap="campaign">
+        SELECT * FROM campaigns WHERE id &gt; #{afterId} ORDER BY id ASC LIMIT #{limit}
+    </select>
+    <update id="publishDraft">
+        UPDATE campaigns SET status='ACTIVE',updated_at=UTC_TIMESTAMP(3)
+        WHERE id=#{id} AND status='DRAFT'
+    </update>
+    <update id="disableActive">
+        UPDATE campaigns SET status='DISABLED',updated_at=UTC_TIMESTAMP(3)
+        WHERE id=#{id} AND status='ACTIVE'
+    </update>
+</mapper>
+

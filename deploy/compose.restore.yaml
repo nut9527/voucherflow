@@ -1,0 +1,116 @@
+services:
+  mysql:
+    image: mysql:8.4@sha256:a81d043930e51745522bd5c430961cf8286f0a23f0a9a2a6e0108f7ea71b0902
+    environment:
+      MYSQL_DATABASE: vf_restore_bootstrap
+      MYSQL_USER: vf_app
+      MYSQL_PASSWORD: ${VF_DB_PASSWORD:?Run scripts/setup-local.ps1}
+      MYSQL_ROOT_PASSWORD: ${VF_MYSQL_ROOT_PASSWORD:?Run scripts/setup-local.ps1}
+    command: ["--default-time-zone=+00:00", "--character-set-server=utf8mb4"]
+    volumes:
+      - ./.local/recovery/${VF_RECOVERY_RUN:?Set the recovery run}/mysql:/var/lib/mysql
+    healthcheck:
+      test: ["CMD-SHELL", "MYSQL_PWD=\"$$MYSQL_PASSWORD\" mysql -u vf_app -D vf_restore_bootstrap -e 'SELECT 1' >/dev/null 2>&1"]
+      interval: 3s
+      timeout: 3s
+      retries: 30
+  supplier-db:
+    image: mysql:8.4@sha256:a81d043930e51745522bd5c430961cf8286f0a23f0a9a2a6e0108f7ea71b0902
+    environment:
+      MYSQL_DATABASE: vf_restore_bootstrap
+      MYSQL_USER: vf_supplier
+      MYSQL_PASSWORD: ${VF_SUPPLIER_DB_PASSWORD:?Run scripts/setup-local.ps1}
+      MYSQL_ROOT_PASSWORD: ${VF_SUPPLIER_MYSQL_ROOT_PASSWORD:?Run scripts/setup-local.ps1}
+    command: ["--default-time-zone=+00:00", "--character-set-server=utf8mb4"]
+    volumes:
+      - ./.local/recovery/${VF_RECOVERY_RUN:?Set the recovery run}/supplier-mysql:/var/lib/mysql
+    healthcheck:
+      test: ["CMD-SHELL", "MYSQL_PWD=\"$$MYSQL_PASSWORD\" mysql -u vf_supplier -D vf_restore_bootstrap -e 'SELECT 1' >/dev/null 2>&1"]
+      interval: 3s
+      timeout: 3s
+      retries: 30
+  redis:
+    image: redis:7.4.2-alpine
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+  broker-storage:
+    image: apache/rocketmq:5.3.2
+    user: "0:0"
+    entrypoint: ["sh", "-c", "chown -R 3000:3000 /storage/store /storage/broker-logs /storage/namesrv-logs"]
+    volumes:
+      - ./.local/recovery/${VF_RECOVERY_RUN:?Set the recovery run}/mq-store:/storage/store
+      - ./.local/recovery/${VF_RECOVERY_RUN:?Set the recovery run}/mq-logs:/storage/broker-logs
+      - ./.local/recovery/${VF_RECOVERY_RUN:?Set the recovery run}/namesrv-logs:/storage/namesrv-logs
+  namesrv:
+    image: apache/rocketmq:5.3.2
+    command: sh mqnamesrv
+    environment:
+      JAVA_OPT_EXT: -Xms128m -Xmx128m -Xmn64m
+    depends_on:
+      broker-storage:
+        condition: service_completed_successfully
+    volumes:
+      - ./.local/recovery/${VF_RECOVERY_RUN:?Set the recovery run}/namesrv-logs:/home/rocketmq/logs
+  broker:
+    image: apache/rocketmq:5.3.2
+    command: sh mqbroker -n namesrv:9876 --enable-proxy -c /home/rocketmq/broker.conf
+    environment:
+      JAVA_OPT_EXT: -Xms512m -Xmx512m -Xmn256m
+    depends_on: [namesrv]
+    volumes:
+      - ./deploy/rocketmq/broker-container.conf:/home/rocketmq/broker.conf:ro
+      - ./.local/recovery/${VF_RECOVERY_RUN:?Set the recovery run}/mq-store:/home/rocketmq/store
+      - ./.local/recovery/${VF_RECOVERY_RUN:?Set the recovery run}/mq-logs:/home/rocketmq/logs
+  supplier:
+    image: voucherflow-supplier:local
+    ports: ["127.0.0.1:18090:8090"]
+    environment:
+      VF_SUPPLIER_DB_HOST: supplier-db
+      VF_SUPPLIER_DB_PORT: "3306"
+      VF_SUPPLIER_DB_NAME: vf_restore_supplier
+      VF_SUPPLIER_DB_USER: vf_supplier
+      VF_SUPPLIER_DB_PASSWORD: ${VF_SUPPLIER_DB_PASSWORD:?Run scripts/setup-local.ps1}
+      VF_SUPPLIER_API_TOKEN: ${VF_SUPPLIER_API_TOKEN:?Run scripts/setup-local.ps1}
+      VF_SUPPLIER_CALLBACK_SECRET: ${VF_SUPPLIER_CALLBACK_SECRET:?Run scripts/setup-local.ps1}
+      VF_SUPPLIER_CALLBACK_URL: http://app:8080/api/supplier/callbacks
+    depends_on:
+      supplier-db:
+        condition: service_healthy
+  app:
+    image: voucherflow:local
+    ports: ["127.0.0.1:18080:8080"]
+    volumes:
+      - ./.local/recovery/${VF_RECOVERY_RUN:?Set the recovery run}/snapshot:/recovery:ro
+    environment:
+      SPRING_PROFILES_ACTIVE: local
+      VF_DB_HOST: mysql
+      VF_DB_PORT: "3306"
+      VF_DB_NAME: vf_restore_main
+      VF_DB_USER: vf_app
+      VF_DB_PASSWORD: ${VF_DB_PASSWORD:?Run scripts/setup-local.ps1}
+      VF_REDIS_HOST: redis
+      VF_REDIS_PORT: "6379"
+      VF_CACHE_ENABLED: "true"
+      VF_RATE_LIMIT_ENABLED: "true"
+      VF_MESSAGING_ENABLED: "true"
+      VF_MESSAGING_PUBLISHING_ENABLED: "true"
+      VF_MQ_ENDPOINTS: broker:8081
+      VF_SUPPLIER_ENABLED: "true"
+      VF_SUPPLIER_URL: http://supplier:8090
+      VF_SUPPLIER_API_TOKEN: ${VF_SUPPLIER_API_TOKEN:?Run scripts/setup-local.ps1}
+      VF_SUPPLIER_CALLBACK_SECRET: ${VF_SUPPLIER_CALLBACK_SECRET:?Run scripts/setup-local.ps1}
+      VF_DEMO_ADMIN_PASSWORD: ${VF_DEMO_ADMIN_PASSWORD:?Run scripts/setup-local.ps1}
+      VF_DEMO_USER_PASSWORD: ${VF_DEMO_USER_PASSWORD:?Run scripts/setup-local.ps1}
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      supplier:
+        condition: service_started
+      broker:
+        condition: service_started
+    stop_grace_period: 45s

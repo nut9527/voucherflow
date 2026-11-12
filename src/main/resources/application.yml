@@ -1,0 +1,83 @@
+spring:
+  application:
+    name: voucherflow
+  datasource:
+    url: jdbc:mysql://${VF_DB_HOST:127.0.0.1}:${VF_DB_PORT:3308}/${VF_DB_NAME:voucherflow}?connectionTimeZone=UTC&forceConnectionTimeZoneToSession=true&preserveInstants=true
+    username: ${VF_DB_USER:vf_app}
+    password: ${VF_DB_PASSWORD:}
+    hikari:
+      transaction-isolation: TRANSACTION_READ_COMMITTED
+      connection-init-sql: SET time_zone = '+00:00'
+      connection-timeout: 3000
+      validation-timeout: 2000
+      maximum-pool-size: 16
+  sql:
+    init:
+      mode: never
+  session:
+    timeout: 30m
+    jdbc:
+      initialize-schema: never
+  jackson:
+    time-zone: UTC
+  data:
+    redis:
+      host: ${VF_REDIS_HOST:127.0.0.1}
+      port: ${VF_REDIS_PORT:6380}
+      connect-timeout: 300ms
+      timeout: 300ms
+
+mybatis:
+  mapper-locations: classpath:mapper/**/*.xml
+  type-handlers-package: com.example.voucherflow.infrastructure
+  configuration:
+    map-underscore-to-camel-case: true
+    default-statement-timeout: 5
+
+voucherflow:
+  cache:
+    enabled: ${VF_CACHE_ENABLED:false}
+  rate-limit:
+    enabled: ${VF_RATE_LIMIT_ENABLED:false}
+  messaging:
+    enabled: ${VF_MESSAGING_ENABLED:false}
+    publishing-enabled: ${VF_MESSAGING_PUBLISHING_ENABLED:false}
+    endpoints: ${VF_MQ_ENDPOINTS:127.0.0.1:8081}
+  reconciliation:
+    batch-size: ${VF_RECONCILIATION_BATCH_SIZE:200}
+  fulfillment:
+    enabled: ${VF_SUPPLIER_ENABLED:false}
+    base-url: ${VF_SUPPLIER_URL:http://127.0.0.1:8090}
+    api-token: ${VF_SUPPLIER_API_TOKEN:}
+    callback-secret: ${VF_SUPPLIER_CALLBACK_SECRET:}
+  demo-users:
+    enabled: false
+
+server:
+  port: ${VF_PORT:8080}
+  servlet:
+    session:
+      cookie:
+        http-only: true
+        secure: true
+        same-site: lax
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,metrics
+  endpoint:
+    health:
+      show-details: never
+      probes:
+        enabled: true
+      group:
+        liveness:
+          include: livenessState
+        readiness:
+          include: readinessState,db
+
+logging:
+  pattern:
+    level: "%5p [traceId=%X{traceId}]"

@@ -1,0 +1,31 @@
+server:
+  port: ${VF_SUPPLIER_PORT:8090}
+spring:
+  application:
+    name: voucherflow-supplier
+  datasource:
+    url: jdbc:mysql://${VF_SUPPLIER_DB_HOST:127.0.0.1}:${VF_SUPPLIER_DB_PORT:3309}/${VF_SUPPLIER_DB_NAME:vf_supplier}?connectionTimeZone=UTC&forceConnectionTimeZoneToSession=true
+    username: ${VF_SUPPLIER_DB_USER:vf_supplier}
+    password: ${VF_SUPPLIER_DB_PASSWORD:}
+    hikari:
+      connection-init-sql: SET time_zone = '+00:00'
+      transaction-isolation: TRANSACTION_READ_COMMITTED
+      maximum-pool-size: 8
+      connection-timeout: 3000
+  task:
+    scheduling:
+      pool:
+        size: 2
+supplier:
+  api-token: ${VF_SUPPLIER_API_TOKEN:}
+  callback-secret: ${VF_SUPPLIER_CALLBACK_SECRET:}
+  callback-url: ${VF_SUPPLIER_CALLBACK_URL:http://127.0.0.1:8080/api/supplier/callbacks}
+  faults-enabled: ${VF_SUPPLIER_FAULTS_ENABLED:false}
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+  endpoint:
+    health:
+      show-details: never

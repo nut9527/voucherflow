@@ -1,0 +1,88 @@
+name: voucherflow-local
+services:
+  supplier-db:
+    image: mysql:8.4@sha256:a81d043930e51745522bd5c430961cf8286f0a23f0a9a2a6e0108f7ea71b0902
+    profiles: [supplier]
+    ports:
+      - "127.0.0.1:${VF_SUPPLIER_DB_PORT:-3309}:3306"
+    environment:
+      MYSQL_DATABASE: vf_supplier
+      MYSQL_USER: vf_supplier
+      MYSQL_PASSWORD: ${VF_SUPPLIER_DB_PASSWORD:-}
+      MYSQL_ROOT_PASSWORD: ${VF_SUPPLIER_MYSQL_ROOT_PASSWORD:-}
+    volumes:
+      - ./.local/supplier-mysql:/var/lib/mysql
+    command: ["--default-time-zone=+00:00", "--character-set-server=utf8mb4"]
+    healthcheck:
+      test: ["CMD-SHELL", "MYSQL_PWD=\"$$MYSQL_PASSWORD\" mysql -h 127.0.0.1 -u vf_supplier -D vf_supplier -e 'SELECT 1' >/dev/null 2>&1"]
+      interval: 3s
+      timeout: 3s
+      retries: 30
+  redis:
+    image: redis:7.4.2-alpine
+    ports:
+      - "127.0.0.1:${VF_REDIS_PORT:-6380}:6379"
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - ./.local/redis:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+  namesrv:
+    image: apache/rocketmq:5.3.2
+    profiles: [messaging]
+    depends_on:
+      broker-storage:
+        condition: service_completed_successfully
+    command: sh mqnamesrv
+    environment:
+      JAVA_OPT_EXT: -Xms128m -Xmx128m -Xmn64m
+    volumes:
+      - ./.local/rocketmq/namesrv-logs:/home/rocketmq/logs
+  broker:
+    image: apache/rocketmq:5.3.2
+    profiles: [messaging]
+    depends_on:
+      namesrv:
+        condition: service_started
+      broker-storage:
+        condition: service_completed_successfully
+    command: sh mqbroker -n namesrv:9876 --enable-proxy -c /home/rocketmq/broker.conf
+    environment:
+      JAVA_OPT_EXT: -Xms512m -Xmx512m -Xmn256m
+    ports:
+      - "127.0.0.1:8081:8081"
+    volumes:
+      - ./deploy/rocketmq/broker.conf:/home/rocketmq/broker.conf:ro
+      - ./.local/rocketmq/broker-logs:/home/rocketmq/logs
+      - ./.local/rocketmq/store:/home/rocketmq/store
+  broker-storage:
+    image: apache/rocketmq:5.3.2
+    profiles: [messaging]
+    user: "0:0"
+    entrypoint: ["sh", "-c", "chown -R 3000:3000 /storage/store /storage/broker-logs /storage/namesrv-logs"]
+    volumes:
+      - ./.local/rocketmq/store:/storage/store
+      - ./.local/rocketmq/broker-logs:/storage/broker-logs
+      - ./.local/rocketmq/namesrv-logs:/storage/namesrv-logs
+  mysql:
+    image: mysql:8.4@sha256:a81d043930e51745522bd5c430961cf8286f0a23f0a9a2a6e0108f7ea71b0902
+    ports:
+      - "127.0.0.1:${VF_DB_PORT:-3308}:3306"
+    environment:
+      MYSQL_DATABASE: voucherflow
+      MYSQL_USER: vf_app
+      MYSQL_PASSWORD: ${VF_DB_PASSWORD:?Run scripts/setup-local.ps1}
+      MYSQL_ROOT_PASSWORD: ${VF_MYSQL_ROOT_PASSWORD:?Run scripts/setup-local.ps1}
+      TZ: UTC
+    volumes:
+      - ./.local/mysql:/var/lib/mysql
+    command: ["--default-time-zone=+00:00", "--character-set-server=utf8mb4", "--collation-server=utf8mb4_0900_ai_ci"]
+    healthcheck:
+      test: ["CMD-SHELL", "MYSQL_PWD=\"$$MYSQL_PASSWORD\" mysql -h 127.0.0.1 -u vf_app -D voucherflow -e 'SELECT 1' >/dev/null 2>&1"]
+      interval: 3s
+      timeout: 3s
+      retries: 30
+      start_period: 20s
