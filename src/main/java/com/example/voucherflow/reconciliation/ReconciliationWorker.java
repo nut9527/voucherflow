@@ -24,8 +24,12 @@ public class ReconciliationWorker {
     // 单次供应商请求最多等待五秒，每十单续租一次，留出距 120 秒租约到期的余量。
     private static final int RENEW_EVERY = 10;
 
-    private record Finding(Observation order, Classification classification, long version,
-            String eventId, String evidence) {}
+    private record Finding(
+            Observation order,
+            Classification classification,
+            long version,
+            String eventId,
+            String evidence) {}
 
     private final ReconciliationStore store;
     private final SupplierEvidenceService supplier;
@@ -37,9 +41,16 @@ public class ReconciliationWorker {
     private final ReconciliationProperties properties;
     private final Clock clock;
 
-    public ReconciliationWorker(ReconciliationStore store, SupplierEvidenceService supplier,
-            OutboxRecoveryQuery outbox, LocalReconciliationService local, DifferenceClassifier classifier,
-            TransactionTemplate tx, ObjectMapper json, ReconciliationProperties properties, Clock clock) {
+    public ReconciliationWorker(
+            ReconciliationStore store,
+            SupplierEvidenceService supplier,
+            OutboxRecoveryQuery outbox,
+            LocalReconciliationService local,
+            DifferenceClassifier classifier,
+            TransactionTemplate tx,
+            ObjectMapper json,
+            ReconciliationProperties properties,
+            Clock clock) {
         this.store = store;
         this.supplier = supplier;
         this.outbox = outbox;
@@ -73,8 +84,9 @@ public class ReconciliationWorker {
             if (!store.saveAccounting(lease, accounting)) return;
         }
         var page = store.page(lease);
-        var failedEvents = outbox.findFailedForOrders(page.stream().map(Observation::id).toList())
-                .stream().collect(Collectors.groupingBy(EventRecoveryView::orderId));
+        var failedEvents =
+                outbox.findFailedForOrders(page.stream().map(Observation::id).toList()).stream()
+                        .collect(Collectors.groupingBy(EventRecoveryView::orderId));
         var findings = new ArrayList<Finding>();
         int processed = 0;
         for (var before : page) {
@@ -90,17 +102,31 @@ public class ReconciliationWorker {
             var after = store.order(before.id());
             var result = classifier.classify(before, remote, after, accounting.valid());
             if (result != null) {
-                findings.add(new Finding(after, result, version == null ? 0 : version, null,
-                        json.writeValueAsString(Map.of(
-                                "supplierStatus", remote,
-                                "accountingValid", accounting.valid(),
-                                "accountingObservedAt", accounting.observedAt().toString(),
-                                "observedAt", clock.instant().toString()))));
+                findings.add(
+                        new Finding(
+                                after,
+                                result,
+                                version == null ? 0 : version,
+                                null,
+                                json.writeValueAsString(
+                                        Map.of(
+                                                "supplierStatus", remote,
+                                                "accountingValid", accounting.valid(),
+                                                "accountingObservedAt",
+                                                        accounting.observedAt().toString(),
+                                                "observedAt", clock.instant().toString()))));
             }
             for (var event : failedEvents.getOrDefault(before.id(), List.of())) {
-                findings.add(new Finding(after,
-                        new Classification("OUTBOX_PUBLISH_FAILED", "OPEN", List.of(RepairOperation.REPLAY_OUTBOX)),
-                        0, event.eventId(), "{\"publishState\":\"FAILED\"}"));
+                findings.add(
+                        new Finding(
+                                after,
+                                new Classification(
+                                        "OUTBOX_PUBLISH_FAILED",
+                                        "OPEN",
+                                        List.of(RepairOperation.REPLAY_OUTBOX)),
+                                0,
+                                event.eventId(),
+                                "{\"publishState\":\"FAILED\"}"));
             }
             processed++;
             if (!clock.instant().isBefore(deadline)) break;
@@ -109,17 +135,24 @@ public class ReconciliationWorker {
         // 预算可能只够处理半页，游标只越过已处理的前缀，未处理订单留给下一份租约。
         long cursor = count == 0 ? lease.cursor() : page.get(count - 1).id();
         // 短页仅在整页处理完后才代表扫描结束，不能把因时间预算提前退出误当作完成。
-        boolean completed = cursor >= lease.upperOrderId()
-                || (count == page.size() && page.size() < properties.getBatchSize());
+        boolean completed =
+                cursor >= lease.upperOrderId()
+                        || (count == page.size() && page.size() < properties.getBatchSize());
         // 差异与游标原子提交，执行中断后可从最后成功的批次继续。
-        tx.executeWithoutResult(status -> {
-            // 查询期间产生的发现仍只在内存中；租约已失效就整批丢弃，由接管者从旧游标重扫。
-            if (!store.owns(lease)) return;
-            for (var finding : findings) {
-                store.insertDiff(lease, finding.order(), finding.classification(), finding.version(),
-                        finding.eventId(), finding.evidence());
-            }
-            store.advance(lease, cursor, count, completed);
-        });
+        tx.executeWithoutResult(
+                status -> {
+                    // 查询期间产生的发现仍只在内存中；租约已失效就整批丢弃，由接管者从旧游标重扫。
+                    if (!store.owns(lease)) return;
+                    for (var finding : findings) {
+                        store.insertDiff(
+                                lease,
+                                finding.order(),
+                                finding.classification(),
+                                finding.version(),
+                                finding.eventId(),
+                                finding.evidence());
+                    }
+                    store.advance(lease, cursor, count, completed);
+                });
     }
 }

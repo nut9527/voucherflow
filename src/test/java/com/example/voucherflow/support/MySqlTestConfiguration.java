@@ -12,8 +12,9 @@ public class MySqlTestConfiguration {
     @Bean
     @ServiceConnection
     MySQLContainer mysqlContainer() {
-        return new MySQLContainer(DockerImageName.parse(
-                "mysql@sha256:a81d043930e51745522bd5c430961cf8286f0a23f0a9a2a6e0108f7ea71b0902"))
+        return new MySQLContainer(
+                        DockerImageName.parse(
+                                "mysql@sha256:a81d043930e51745522bd5c430961cf8286f0a23f0a9a2a6e0108f7ea71b0902"))
                 .withDatabaseName("voucherflow_test")
                 .withUsername("vf_test")
                 .withPassword("isolated-test-password")

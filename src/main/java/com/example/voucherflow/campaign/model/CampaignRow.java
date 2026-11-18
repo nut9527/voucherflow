@@ -24,58 +24,147 @@ public class CampaignRow {
     private Instant createdAt;
     private Instant updatedAt;
 
-    public Long getId() { return id; }
-    public void setId(Long id) { this.id = id; }
+    public Long getId() {
+        return id;
+    }
 
-    public String getName() { return name; }
-    public void setName(String name) { this.name = name; }
+    public void setId(Long id) {
+        this.id = id;
+    }
 
-    public String getDescription() { return description; }
-    public void setDescription(String description) { this.description = description; }
+    public String getName() {
+        return name;
+    }
 
-    public int getTotalStock() { return totalStock; }
-    public void setTotalStock(int totalStock) { this.totalStock = totalStock; }
+    public void setName(String name) {
+        this.name = name;
+    }
 
-    public int getAvailableStock() { return availableStock; }
-    public void setAvailableStock(int availableStock) { this.availableStock = availableStock; }
+    public String getDescription() {
+        return description;
+    }
 
-    public int getReservedStock() { return reservedStock; }
-    public void setReservedStock(int reservedStock) { this.reservedStock = reservedStock; }
+    public void setDescription(String description) {
+        this.description = description;
+    }
 
-    public int getIssuedStock() { return issuedStock; }
-    public void setIssuedStock(int issuedStock) { this.issuedStock = issuedStock; }
+    public int getTotalStock() {
+        return totalStock;
+    }
 
-    public CampaignStatus getStatus() { return status; }
-    public void setStatus(CampaignStatus status) { this.status = status; }
+    public void setTotalStock(int totalStock) {
+        this.totalStock = totalStock;
+    }
 
-    public Instant getStartAt() { return startAt; }
-    public void setStartAt(Instant startAt) { this.startAt = startAt; }
+    public int getAvailableStock() {
+        return availableStock;
+    }
 
-    public Instant getEndAt() { return endAt; }
-    public void setEndAt(Instant endAt) { this.endAt = endAt; }
+    public void setAvailableStock(int availableStock) {
+        this.availableStock = availableStock;
+    }
 
-    public Instant getRedeemEndAt() { return redeemEndAt; }
-    public void setRedeemEndAt(Instant redeemEndAt) { this.redeemEndAt = redeemEndAt; }
+    public int getReservedStock() {
+        return reservedStock;
+    }
 
-    public FulfillmentMode getFulfillmentMode() { return fulfillmentMode; }
-    public void setFulfillmentMode(FulfillmentMode fulfillmentMode) { this.fulfillmentMode = fulfillmentMode; }
+    public void setReservedStock(int reservedStock) {
+        this.reservedStock = reservedStock;
+    }
 
-    public String getSupplierId() { return supplierId; }
-    public void setSupplierId(String supplierId) { this.supplierId = supplierId; }
+    public int getIssuedStock() {
+        return issuedStock;
+    }
 
-    public String getProductCode() { return productCode; }
-    public void setProductCode(String productCode) { this.productCode = productCode; }
+    public void setIssuedStock(int issuedStock) {
+        this.issuedStock = issuedStock;
+    }
 
-    public String getContractVersion() { return contractVersion; }
-    public void setContractVersion(String contractVersion) { this.contractVersion = contractVersion; }
+    public CampaignStatus getStatus() {
+        return status;
+    }
 
-    public long getCreatedBy() { return createdBy; }
-    public void setCreatedBy(long createdBy) { this.createdBy = createdBy; }
+    public void setStatus(CampaignStatus status) {
+        this.status = status;
+    }
 
-    public Instant getCreatedAt() { return createdAt; }
-    public void setCreatedAt(Instant createdAt) { this.createdAt = createdAt; }
+    public Instant getStartAt() {
+        return startAt;
+    }
 
-    public Instant getUpdatedAt() { return updatedAt; }
-    public void setUpdatedAt(Instant updatedAt) { this.updatedAt = updatedAt; }
+    public void setStartAt(Instant startAt) {
+        this.startAt = startAt;
+    }
+
+    public Instant getEndAt() {
+        return endAt;
+    }
+
+    public void setEndAt(Instant endAt) {
+        this.endAt = endAt;
+    }
+
+    public Instant getRedeemEndAt() {
+        return redeemEndAt;
+    }
+
+    public void setRedeemEndAt(Instant redeemEndAt) {
+        this.redeemEndAt = redeemEndAt;
+    }
+
+    public FulfillmentMode getFulfillmentMode() {
+        return fulfillmentMode;
+    }
+
+    public void setFulfillmentMode(FulfillmentMode fulfillmentMode) {
+        this.fulfillmentMode = fulfillmentMode;
+    }
+
+    public String getSupplierId() {
+        return supplierId;
+    }
+
+    public void setSupplierId(String supplierId) {
+        this.supplierId = supplierId;
+    }
+
+    public String getProductCode() {
+        return productCode;
+    }
+
+    public void setProductCode(String productCode) {
+        this.productCode = productCode;
+    }
+
+    public String getContractVersion() {
+        return contractVersion;
+    }
+
+    public void setContractVersion(String contractVersion) {
+        this.contractVersion = contractVersion;
+    }
+
+    public long getCreatedBy() {
+        return createdBy;
+    }
+
+    public void setCreatedBy(long createdBy) {
+        this.createdBy = createdBy;
+    }
+
+    public Instant getCreatedAt() {
+        return createdAt;
+    }
+
+    public void setCreatedAt(Instant createdAt) {
+        this.createdAt = createdAt;
+    }
+
+    public Instant getUpdatedAt() {
+        return updatedAt;
+    }
+
+    public void setUpdatedAt(Instant updatedAt) {
+        this.updatedAt = updatedAt;
+    }
 }
-

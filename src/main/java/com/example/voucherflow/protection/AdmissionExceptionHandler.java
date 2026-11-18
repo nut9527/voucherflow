@@ -13,7 +13,8 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 public class AdmissionExceptionHandler {
     @ExceptionHandler(AdmissionException.class)
     ResponseEntity<ApiResponse<Void>> handle(AdmissionException ex) {
-        return ResponseEntity.status(ex.status()).header("Retry-After", Long.toString(ex.retryAfterSeconds()))
+        return ResponseEntity.status(ex.status())
+                .header("Retry-After", Long.toString(ex.retryAfterSeconds()))
                 .body(ex.response());
     }
 }

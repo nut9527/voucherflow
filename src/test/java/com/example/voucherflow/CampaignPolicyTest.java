@@ -1,5 +1,8 @@
 package com.example.voucherflow;
 
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+
 import com.example.voucherflow.campaign.CampaignDtos;
 import com.example.voucherflow.campaign.CampaignPolicy;
 import com.example.voucherflow.campaign.model.CampaignPhase;
@@ -11,9 +14,6 @@ import com.example.voucherflow.common.ErrorCode;
 import java.time.Instant;
 import org.junit.jupiter.api.Test;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
-
 /** 验证活动时间窗口、数据库时间精度和履约配置的业务规则。 */
 class CampaignPolicyTest {
     private final CampaignPolicy policy = new CampaignPolicy();
@@ -22,38 +22,80 @@ class CampaignPolicyTest {
 
     @Test
     void rejectsEmptyClaimWindow() {
-        assertInvalid(new CampaignDtos.CreateRequest("活动", "", 10, start, start, end,
-                FulfillmentMode.LOCAL, null, null, null));
+        assertInvalid(
+                new CampaignDtos.DraftRequest(
+                        "活动", "", 10, start, start, end, FulfillmentMode.LOCAL, null, null, null));
     }
 
     @Test
     void rejectsWindowCollapsedByDatabaseMillisecondPrecision() {
-        assertInvalid(new CampaignDtos.CreateRequest("活动", "", 10, start, start.plusNanos(1), end,
-                FulfillmentMode.LOCAL, null, null, null));
+        assertInvalid(
+                new CampaignDtos.DraftRequest(
+                        "活动",
+                        "",
+                        10,
+                        start,
+                        start.plusNanos(1),
+                        end,
+                        FulfillmentMode.LOCAL,
+                        null,
+                        null,
+                        null));
     }
 
     @Test
     void acceptsEqualClaimAndRedemptionDeadlines() {
-        policy.validateDraft(new CampaignDtos.CreateRequest("活动", "", 10, start, end, end,
-                FulfillmentMode.LOCAL, null, null, null));
+        policy.validateDraft(
+                new CampaignDtos.DraftRequest(
+                        "活动", "", 10, start, end, end, FulfillmentMode.LOCAL, null, null, null));
     }
 
     @Test
     void rejectsRedemptionDeadlineBeforeClaimEnd() {
-        assertInvalid(new CampaignDtos.CreateRequest("活动", "", 10, start, end, end.minusMillis(1),
-                FulfillmentMode.LOCAL, null, null, null));
+        assertInvalid(
+                new CampaignDtos.DraftRequest(
+                        "活动",
+                        "",
+                        10,
+                        start,
+                        end,
+                        end.minusMillis(1),
+                        FulfillmentMode.LOCAL,
+                        null,
+                        null,
+                        null));
     }
 
     @Test
     void localModeRejectsSupplierFields() {
-        assertInvalid(new CampaignDtos.CreateRequest("活动", "", 10, start, end, end,
-                FulfillmentMode.LOCAL, "supplier", null, null));
+        assertInvalid(
+                new CampaignDtos.DraftRequest(
+                        "活动",
+                        "",
+                        10,
+                        start,
+                        end,
+                        end,
+                        FulfillmentMode.LOCAL,
+                        "supplier",
+                        null,
+                        null));
     }
 
     @Test
     void supplierModeRequiresAllConfiguration() {
-        assertInvalid(new CampaignDtos.CreateRequest("活动", "", 10, start, end, end,
-                FulfillmentMode.SUPPLIER, "supplier", "product", null));
+        assertInvalid(
+                new CampaignDtos.DraftRequest(
+                        "活动",
+                        "",
+                        10,
+                        start,
+                        end,
+                        end,
+                        FulfillmentMode.SUPPLIER,
+                        "supplier",
+                        "product",
+                        null));
     }
 
     @Test
@@ -65,7 +107,8 @@ class CampaignPolicyTest {
         row.setProductCode("product");
         row.setContractVersion("v1");
         assertThatThrownBy(() -> policy.validatePublish(row, false))
-                .isInstanceOfSatisfying(BusinessException.class,
+                .isInstanceOfSatisfying(
+                        BusinessException.class,
                         ex -> assertThat(ex.code()).isEqualTo(ErrorCode.INVALID_CAMPAIGN_STATE));
     }
 
@@ -92,9 +135,10 @@ class CampaignPolicyTest {
         return row;
     }
 
-    private void assertInvalid(CampaignDtos.CreateRequest request) {
+    private void assertInvalid(CampaignDtos.DraftRequest request) {
         assertThatThrownBy(() -> policy.validateDraft(request))
-                .isInstanceOfSatisfying(BusinessException.class,
+                .isInstanceOfSatisfying(
+                        BusinessException.class,
                         ex -> assertThat(ex.code()).isEqualTo(ErrorCode.VALIDATION_ERROR));
     }
 }

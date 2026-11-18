@@ -24,14 +24,18 @@ public record MessagingProperties(
         @DefaultValue("30s") Duration invisibleDuration,
         @DefaultValue("15s") Duration shutdownTimeout) {
     public MessagingProperties {
-        if (lease != null && requestTimeout != null && lease.compareTo(requestTimeout.multipliedBy(3)) <= 0) {
-            throw new IllegalArgumentException("Messaging lease must exceed three request timeouts");
+        if (lease != null
+                && requestTimeout != null
+                && lease.compareTo(requestTimeout.multipliedBy(3)) <= 0) {
+            throw new IllegalArgumentException(
+                    "Messaging lease must exceed three request timeouts");
         }
         if (requestTimeout != null && (requestTimeout.isNegative() || requestTimeout.isZero())) {
             throw new IllegalArgumentException("Messaging request timeout must be positive");
         }
         if (invisibleDuration != null && invisibleDuration.compareTo(Duration.ofSeconds(10)) < 0) {
-            throw new IllegalArgumentException("Messaging invisibility must be at least ten seconds");
+            throw new IllegalArgumentException(
+                    "Messaging invisibility must be at least ten seconds");
         }
     }
 }

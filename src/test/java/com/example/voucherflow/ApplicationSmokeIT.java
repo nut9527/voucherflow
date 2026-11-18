@@ -1,7 +1,9 @@
 package com.example.voucherflow;
 
-import com.jayway.jsonpath.JsonPath;
+import static org.assertj.core.api.Assertions.assertThat;
+
 import com.example.voucherflow.support.MySqlIntegrationTest;
+import com.jayway.jsonpath.JsonPath;
 import java.net.CookieManager;
 import java.net.CookiePolicy;
 import java.net.URI;
@@ -16,14 +18,11 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
-import static org.assertj.core.api.Assertions.assertThat;
-
 /** 验证应用基础 HTTP 契约，包括 CSRF、追踪编号、健康探针与错误响应。 */
 class ApplicationSmokeIT extends MySqlIntegrationTest {
 
-    private static final HttpClient HTTP = HttpClient.newBuilder()
-            .connectTimeout(Duration.ofSeconds(5))
-            .build();
+    private static final HttpClient HTTP =
+            HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(5)).build();
 
     @AfterAll
     static void closeClient() {
@@ -39,7 +38,8 @@ class ApplicationSmokeIT extends MySqlIntegrationTest {
         assertThat(response.statusCode()).isEqualTo(200);
         assertThat(response.headers().firstValue("Content-Type").orElseThrow())
                 .startsWith("application/json");
-        assertThat(json.<Map<String, Object>>read("$")).containsOnlyKeys("code", "message", "data", "traceId");
+        assertThat(json.<Map<String, Object>>read("$"))
+                .containsOnlyKeys("code", "message", "data", "traceId");
         assertThat(json.<String>read("$.code")).isEqualTo("OK");
         assertThat(json.<String>read("$.message")).isEqualTo("成功");
         assertThat(json.<String>read("$.data.token")).isNotBlank();
@@ -73,23 +73,37 @@ class ApplicationSmokeIT extends MySqlIntegrationTest {
 
     @Test
     void unsupportedHttpMethodReturnsMethodNotAllowed() throws Exception {
-        try (var client = HttpClient.newBuilder()
-                .cookieHandler(new CookieManager(null, CookiePolicy.ACCEPT_ALL))
-                .connectTimeout(Duration.ofSeconds(5)).build()) {
-            var csrfResponse = client.send(request("/api/auth/csrf").GET().build(), HttpResponse.BodyHandlers.ofString());
+        try (var client =
+                HttpClient.newBuilder()
+                        .cookieHandler(new CookieManager(null, CookiePolicy.ACCEPT_ALL))
+                        .connectTimeout(Duration.ofSeconds(5))
+                        .build()) {
+            var csrfResponse =
+                    client.send(
+                            request("/api/auth/csrf").GET().build(),
+                            HttpResponse.BodyHandlers.ofString());
             assertThat(csrfResponse.statusCode()).isEqualTo(200);
             var csrf = JsonPath.parse(csrfResponse.body());
-            var login = request("/api/auth/login")
-                    .header(csrf.read("$.data.headerName", String.class), csrf.read("$.data.token", String.class))
-                    .header("Content-Type", "application/x-www-form-urlencoded")
-                    .POST(HttpRequest.BodyPublishers.ofString("username=admin-demo&password=test-only-Admin-123"))
-                    .build();
-            assertThat(client.send(login, HttpResponse.BodyHandlers.ofString()).statusCode()).isEqualTo(200);
+            var login =
+                    request("/api/auth/login")
+                            .header(
+                                    csrf.read("$.data.headerName", String.class),
+                                    csrf.read("$.data.token", String.class))
+                            .header("Content-Type", "application/x-www-form-urlencoded")
+                            .POST(
+                                    HttpRequest.BodyPublishers.ofString(
+                                            "username=admin-demo&password=test-only-Admin-123"))
+                            .build();
+            assertThat(client.send(login, HttpResponse.BodyHandlers.ofString()).statusCode())
+                    .isEqualTo(200);
 
-            var response = client.send(request("/api/admin/campaigns/1/publish").GET().build(),
-                    HttpResponse.BodyHandlers.ofString());
+            var response =
+                    client.send(
+                            request("/api/admin/campaigns/1/publish").GET().build(),
+                            HttpResponse.BodyHandlers.ofString());
             assertThat(response.statusCode()).isEqualTo(405);
-            assertThat(JsonPath.parse(response.body()).<String>read("$.code")).isEqualTo("METHOD_NOT_ALLOWED");
+            assertThat(JsonPath.parse(response.body()).<String>read("$.code"))
+                    .isEqualTo("METHOD_NOT_ALLOWED");
         }
     }
 

@@ -62,7 +62,7 @@ services:
     image: apache/rocketmq:5.3.2
     profiles: [messaging]
     user: "0:0"
-    entrypoint: ["sh", "-c", "chown -R 3000:3000 /storage/store /storage/broker-logs /storage/namesrv-logs"]
+    entrypoint: ["sh", "-c", "chown 3000:3000 /storage/store /storage/broker-logs /storage/namesrv-logs"]
     volumes:
       - ./.local/rocketmq/store:/storage/store
       - ./.local/rocketmq/broker-logs:/storage/broker-logs

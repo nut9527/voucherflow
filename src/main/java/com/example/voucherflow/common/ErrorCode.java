@@ -33,6 +33,11 @@ public enum ErrorCode {
         this.message = message;
     }
 
-    public HttpStatus httpStatus() { return status; }
-    public String defaultMessage() { return message; }
+    public HttpStatus httpStatus() {
+        return status;
+    }
+
+    public String defaultMessage() {
+        return message;
+    }
 }

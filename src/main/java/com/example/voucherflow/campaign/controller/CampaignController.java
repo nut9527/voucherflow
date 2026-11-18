@@ -1,16 +1,18 @@
 package com.example.voucherflow.campaign.controller;
 
-import com.example.voucherflow.campaign.CampaignDtos;
-import com.example.voucherflow.campaign.CampaignService;
-import com.example.voucherflow.common.ApiResponse;
-import com.example.voucherflow.common.PageQuery;
-import com.example.voucherflow.common.PageResult;
-import jakarta.validation.constraints.Positive;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+
+import com.example.voucherflow.campaign.CampaignDtos;
+import com.example.voucherflow.campaign.CampaignService;
+import com.example.voucherflow.common.ApiResponse;
+import com.example.voucherflow.common.PageQuery;
+import com.example.voucherflow.common.PageResult;
+
+import jakarta.validation.constraints.Positive;
 
 /** 提供公开活动列表和详情接口，草稿由查询层过滤。 */
 @RestController
@@ -34,4 +36,3 @@ public class CampaignController {
         return ApiResponse.ok(service.publicDetail(id));
     }
 }
-

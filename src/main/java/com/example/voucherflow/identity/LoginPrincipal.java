@@ -11,8 +11,7 @@ import org.springframework.security.core.userdetails.UserDetails;
 
 /** 可保存到会话的登录身份；密码摘要仅参与认证，不随身份序列化。 */
 public final class LoginPrincipal implements UserDetails, CredentialsContainer {
-    @Serial
-    private static final long serialVersionUID = 1L;
+    @Serial private static final long serialVersionUID = 1L;
 
     private final long id;
     private final String username;
@@ -27,12 +26,31 @@ public final class LoginPrincipal implements UserDetails, CredentialsContainer {
         this.passwordHash = passwordHash;
     }
 
-    public long id() { return id; }
-    public Role role() { return role; }
-    @Override public String getUsername() { return username; }
-    @Override public String getPassword() { return passwordHash; }
-    @Override public Collection<? extends GrantedAuthority> getAuthorities() {
+    public long id() {
+        return id;
+    }
+
+    public Role role() {
+        return role;
+    }
+
+    @Override
+    public String getUsername() {
+        return username;
+    }
+
+    @Override
+    public String getPassword() {
+        return passwordHash;
+    }
+
+    @Override
+    public Collection<? extends GrantedAuthority> getAuthorities() {
         return List.of(new SimpleGrantedAuthority("ROLE_" + role.name()));
     }
-    @Override public void eraseCredentials() { passwordHash = null; }
+
+    @Override
+    public void eraseCredentials() {
+        passwordHash = null;
+    }
 }

@@ -23,42 +23,133 @@ public class FulfillmentProperties {
     private String baseUrl = "http://127.0.0.1:8090";
     private String apiToken = "";
     private String callbackSecret = "";
-    public boolean isEnabled() { return enabled; }
-    public void setEnabled(boolean v) { enabled = v; }
-    public boolean isWorkerEnabled() { return workerEnabled; }
-    public void setWorkerEnabled(boolean v) { workerEnabled = v; }
-    public boolean isAcceptingNew() { return acceptingNew; }
-    public void setAcceptingNew(boolean v) { acceptingNew = v; }
-    public int getConcurrency() { return concurrency; }
-    public void setConcurrency(int v) { concurrency = v; }
-    public int getLeaseSeconds() { return leaseSeconds; }
-    public void setLeaseSeconds(int v) { leaseSeconds = v; }
-    public int getMaxAttempts() { return maxAttempts; }
-    public void setMaxAttempts(int v) { maxAttempts = v; }
-    public int getMaxElapsedSeconds() { return maxElapsedSeconds; }
-    public void setMaxElapsedSeconds(int v) { maxElapsedSeconds=v; }
-    public int getMaxReservedPerCampaign() { return maxReservedPerCampaign; }
-    public void setMaxReservedPerCampaign(int v) { maxReservedPerCampaign = v; }
-    public int getIdempotencySeconds() { return idempotencySeconds; }
-    public void setIdempotencySeconds(int v) { idempotencySeconds = v; }
-    public String getSupplierId() { return supplierId; }
-    public void setSupplierId(String v) { supplierId = v; }
-    public String getContractVersion() { return contractVersion; }
-    public void setContractVersion(String v) { contractVersion = v; }
-    public String getBaseUrl() { return baseUrl; }
-    public void setBaseUrl(String v) { baseUrl = v; }
-    public String getApiToken() { return apiToken; }
-    public void setApiToken(String v) { apiToken = v; }
-    public String getCallbackSecret() { return callbackSecret; }
-    public void setCallbackSecret(String v) { callbackSecret = v; }
+
+    public boolean isEnabled() {
+        return enabled;
+    }
+
+    public void setEnabled(boolean v) {
+        enabled = v;
+    }
+
+    public boolean isWorkerEnabled() {
+        return workerEnabled;
+    }
+
+    public void setWorkerEnabled(boolean v) {
+        workerEnabled = v;
+    }
+
+    public boolean isAcceptingNew() {
+        return acceptingNew;
+    }
+
+    public void setAcceptingNew(boolean v) {
+        acceptingNew = v;
+    }
+
+    public int getConcurrency() {
+        return concurrency;
+    }
+
+    public void setConcurrency(int v) {
+        concurrency = v;
+    }
+
+    public int getLeaseSeconds() {
+        return leaseSeconds;
+    }
+
+    public void setLeaseSeconds(int v) {
+        leaseSeconds = v;
+    }
+
+    public int getMaxAttempts() {
+        return maxAttempts;
+    }
+
+    public void setMaxAttempts(int v) {
+        maxAttempts = v;
+    }
+
+    public int getMaxElapsedSeconds() {
+        return maxElapsedSeconds;
+    }
+
+    public void setMaxElapsedSeconds(int v) {
+        maxElapsedSeconds = v;
+    }
+
+    public int getMaxReservedPerCampaign() {
+        return maxReservedPerCampaign;
+    }
+
+    public void setMaxReservedPerCampaign(int v) {
+        maxReservedPerCampaign = v;
+    }
+
+    public int getIdempotencySeconds() {
+        return idempotencySeconds;
+    }
+
+    public void setIdempotencySeconds(int v) {
+        idempotencySeconds = v;
+    }
+
+    public String getSupplierId() {
+        return supplierId;
+    }
+
+    public void setSupplierId(String v) {
+        supplierId = v;
+    }
+
+    public String getContractVersion() {
+        return contractVersion;
+    }
+
+    public void setContractVersion(String v) {
+        contractVersion = v;
+    }
+
+    public String getBaseUrl() {
+        return baseUrl;
+    }
+
+    public void setBaseUrl(String v) {
+        baseUrl = v;
+    }
+
+    public String getApiToken() {
+        return apiToken;
+    }
+
+    public void setApiToken(String v) {
+        apiToken = v;
+    }
+
+    public String getCallbackSecret() {
+        return callbackSecret;
+    }
+
+    public void setCallbackSecret(String v) {
+        callbackSecret = v;
+    }
+
     @jakarta.annotation.PostConstruct
     void validate() {
-        if (concurrency < 1 || concurrency > 32 || leaseSeconds < 10 || maxAttempts < 1
-                || maxReservedPerCampaign < 1 || idempotencySeconds < 30 || maxElapsedSeconds < 1) {
+        if (concurrency < 1
+                || concurrency > 32
+                || leaseSeconds < 10
+                || maxAttempts < 1
+                || maxReservedPerCampaign < 1
+                || idempotencySeconds < 30
+                || maxElapsedSeconds < 1) {
             throw new IllegalArgumentException("Invalid fulfillment execution budget");
         }
         if (enabled && (apiToken.length() < 24 || callbackSecret.length() < 24)) {
-            throw new IllegalArgumentException("Supplier API and callback secrets must contain at least 24 characters");
+            throw new IllegalArgumentException(
+                    "Supplier API and callback secrets must contain at least 24 characters");
         }
     }
 }

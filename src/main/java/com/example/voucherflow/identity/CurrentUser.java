@@ -11,7 +11,8 @@ import org.springframework.stereotype.Component;
 public class CurrentUser {
     public LoginPrincipal requirePrincipal() {
         var authentication = SecurityContextHolder.getContext().getAuthentication();
-        if (authentication == null || !authentication.isAuthenticated()
+        if (authentication == null
+                || !authentication.isAuthenticated()
                 || !(authentication.getPrincipal() instanceof LoginPrincipal principal)) {
             throw new BusinessException(ErrorCode.UNAUTHENTICATED);
         }
@@ -29,7 +30,8 @@ public class CurrentUser {
 
     public AuthDtos.Me me() {
         var principal = requirePrincipal();
-        return new AuthDtos.Me(Long.toString(principal.id()), principal.getUsername(), principal.role());
+        return new AuthDtos.Me(
+                Long.toString(principal.id()), principal.getUsername(), principal.role());
     }
 
     private LoginPrincipal requireRole(Role role) {

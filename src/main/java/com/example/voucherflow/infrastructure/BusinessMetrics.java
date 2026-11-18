@@ -36,9 +36,13 @@ public class BusinessMetrics {
     @Scheduled(fixedDelayString = "${voucherflow.metrics.interval-ms:15000}")
     public void refresh() {
         try {
-            pending.set(count("SELECT COUNT(*) FROM outbox_events WHERE state IN ('PENDING','SENDING')"));
+            pending.set(
+                    count(
+                            "SELECT COUNT(*) FROM outbox_events WHERE state IN ('PENDING','SENDING')"));
             failedEvents.set(count("SELECT COUNT(*) FROM outbox_events WHERE state='FAILED'"));
-            oldestPendingEvent.set(count("""
+            oldestPendingEvent.set(
+                    count(
+                            """
                     SELECT COALESCE(TIMESTAMPDIFF(SECOND,MIN(created_at),UTC_TIMESTAMP(3)),0)
                     FROM (
                         SELECT MIN(created_at) AS created_at FROM outbox_events WHERE state='PENDING'
@@ -47,7 +51,9 @@ public class BusinessMetrics {
                     ) oldest
                     """));
             paused.set(count("SELECT COUNT(*) FROM fulfillment_orders WHERE job_state='PAUSED'"));
-            oldestReservation.set(count("""
+            oldestReservation.set(
+                    count(
+                            """
                     SELECT COALESCE(TIMESTAMPDIFF(SECOND,MIN(created_at),UTC_TIMESTAMP(3)),0)
                     FROM (
                         SELECT MIN(created_at) AS created_at FROM fulfillment_orders WHERE status='PENDING'
@@ -55,7 +61,9 @@ public class BusinessMetrics {
                         SELECT MIN(created_at) FROM fulfillment_orders WHERE status='UNKNOWN'
                     ) oldest
                     """));
-            openDifferences.set(count("""
+            openDifferences.set(
+                    count(
+                            """
                     SELECT COUNT(*) FROM reconciliation_diffs
                     WHERE state IN ('OPEN','NEEDS_RECHECK','REVIEW_ONLY')
                     """));

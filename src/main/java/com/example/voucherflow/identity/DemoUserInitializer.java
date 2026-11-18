@@ -22,7 +22,9 @@ public class DemoUserInitializer implements ApplicationRunner {
     private final String adminPassword;
     private final String userPassword;
 
-    public DemoUserInitializer(UserMapper users, PasswordEncoder passwords,
+    public DemoUserInitializer(
+            UserMapper users,
+            PasswordEncoder passwords,
             @Value("${voucherflow.demo-users.admin-password}") String adminPassword,
             @Value("${voucherflow.demo-users.user-password}") String userPassword) {
         this.users = users;

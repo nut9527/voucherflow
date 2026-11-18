@@ -1,12 +1,5 @@
 package com.example.voucherflow.campaign.controller;
 
-import com.example.voucherflow.campaign.CampaignDtos;
-import com.example.voucherflow.campaign.CampaignService;
-import com.example.voucherflow.common.ApiResponse;
-import com.example.voucherflow.common.PageQuery;
-import com.example.voucherflow.common.PageResult;
-import jakarta.validation.Valid;
-import jakarta.validation.constraints.Positive;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -17,6 +10,15 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+
+import com.example.voucherflow.campaign.CampaignDtos;
+import com.example.voucherflow.campaign.CampaignService;
+import com.example.voucherflow.common.ApiResponse;
+import com.example.voucherflow.common.PageQuery;
+import com.example.voucherflow.common.PageResult;
+
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.Positive;
 
 /** 提供管理员创建、编辑、发布、停用和查询活动的接口。 */
 @RestController
@@ -30,13 +32,15 @@ public class AdminCampaignController {
 
     @PostMapping
     public ResponseEntity<ApiResponse<CampaignDtos.Created>> create(
-            @Valid @RequestBody CampaignDtos.CreateRequest request) {
-        return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.ok(service.create(request)));
+            @Valid @RequestBody CampaignDtos.DraftRequest request) {
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(ApiResponse.ok(service.create(request)));
     }
 
     @PutMapping("/{id}")
-    public ApiResponse<CampaignDtos.AdminDetail> update(@PathVariable @Positive long id,
-            @Valid @RequestBody CampaignDtos.UpdateRequest request) {
+    public ApiResponse<CampaignDtos.AdminDetail> update(
+            @PathVariable @Positive long id,
+            @Valid @RequestBody CampaignDtos.DraftRequest request) {
         return ApiResponse.ok(service.update(id, request));
     }
 
@@ -62,4 +66,3 @@ public class AdminCampaignController {
         return ApiResponse.ok(service.adminPage(new PageQuery(afterId, size)));
     }
 }
-

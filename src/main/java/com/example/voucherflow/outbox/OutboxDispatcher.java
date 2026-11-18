@@ -14,22 +14,39 @@ public class OutboxDispatcher {
     private final Semaphore slots;
     private final AtomicBoolean ticking = new AtomicBoolean();
     private volatile boolean stopping;
-    public OutboxDispatcher(OutboxLeaseService leases, RocketMqEventSender sender, ExecutorService executor, int capacity) {
-        this.leases = leases; this.sender = sender; this.executor = executor; this.slots = new Semaphore(capacity);
+
+    public OutboxDispatcher(
+            OutboxLeaseService leases,
+            RocketMqEventSender sender,
+            ExecutorService executor,
+            int capacity) {
+        this.leases = leases;
+        this.sender = sender;
+        this.executor = executor;
+        this.slots = new Semaphore(capacity);
     }
+
     /** 按空闲发送额度领取事件，已提交到线程池的任务自行归还额度。 */
     public void tick() {
-        if (stopping || !ticking.compareAndSet(false, true)) { return; }
+        if (stopping || !ticking.compareAndSet(false, true)) {
+            return;
+        }
         // held 只记录尚未交给发送任务的额度；提交成功后，额度由 publish 的 finally 归还。
         int held = 0;
         try {
-            while (slots.tryAcquire()) { held++; }
-            if (held == 0) { return; }
+            while (slots.tryAcquire()) {
+                held++;
+            }
+            if (held == 0) {
+                return;
+            }
             var events = leases.claim(held);
             slots.release(held - events.size());
             held = events.size();
             for (var event : events) {
-                if (stopping) { break; }
+                if (stopping) {
+                    break;
+                }
                 executor.execute(() -> publish(event));
                 held--;
             }
@@ -41,6 +58,7 @@ public class OutboxDispatcher {
             ticking.set(false);
         }
     }
+
     private void publish(LeasedEvent event) {
         try {
             boolean accepted = false;
@@ -48,13 +66,25 @@ public class OutboxDispatcher {
             try {
                 sender.send(event);
                 accepted = true;
-            } catch (Exception ex) { failure = ex.getClass().getSimpleName(); }
+            } catch (Exception ex) {
+                failure = ex.getClass().getSimpleName();
+            }
             // 发送成功与本地状态提交之间可能中断，重复发送由消费者按事件编号去重。
             boolean retained = leases.complete(event, accepted, failure);
-            if (!retained) { log.info("Outbox lease lost eventId={}", event.eventId()); }
+            if (!retained) {
+                log.info("Outbox lease lost eventId={}", event.eventId());
+            }
         } catch (RuntimeException ex) {
-            log.warn("Outbox completion failed eventId={} category={}", event.eventId(), ex.getClass().getSimpleName());
-        } finally { slots.release(); }
+            log.warn(
+                    "Outbox completion failed eventId={} category={}",
+                    event.eventId(),
+                    ex.getClass().getSimpleName());
+        } finally {
+            slots.release();
+        }
     }
-    public void stop() { stopping = true; }
+
+    public void stop() {
+        stopping = true;
+    }
 }

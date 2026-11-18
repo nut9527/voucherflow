@@ -12,8 +12,6 @@ import org.springframework.test.context.ActiveProfiles;
 @ActiveProfiles("test")
 @Import(MySqlTestConfiguration.class)
 public abstract class MySqlIntegrationTest {
-    @LocalServerPort
-    protected int port;
-    @Autowired
-    protected JdbcTemplate jdbc;
+    @LocalServerPort protected int port;
+    @Autowired protected JdbcTemplate jdbc;
 }

@@ -119,79 +119,43 @@ VoucherFlow/
 
 ## 快速开始
 
-本地脚本环境：**Windows · JDK 21 · PowerShell 7 · Docker Compose（Linux 容器）**。在项目根目录执行：
+启动需要 Windows、JDK 21 和 Docker Desktop（Linux 容器）。启停入口使用 Windows 自带的 PowerShell 5.1，无需安装 PowerShell 7；演示、测试与运维脚本使用 PowerShell 7。
 
 ```powershell
-.\scripts\setup-local.ps1   # 生成本地配置与凭证
-.\scripts\dev-up.ps1        # 启动 MySQL、Redis
-.\scripts\run-app.ps1       # 启动主应用
+.\start.cmd           # 构建并启动全部服务
+.\start.cmd -Faults   # 同时开放供应商故障演示接口
+.\stop.cmd            # 停止服务，保留数据
 ```
 
-主应用地址为 `http://localhost:8080`。管理员 `admin-demo`、普通用户 `user-demo` 的密码保存在 `.env`。
+入口自动生成 `.env`、打包两个应用、启动依赖并等待就绪。默认开启缓存、限流、消息、通知和供应商履约。支持双击，执行结束后按键关闭窗口；服务在后台运行。
 
-另开终端，一条命令体验活动发布、重复领取、券包查询、幂等核销与库存对账：
+- 主应用：[就绪检查](http://localhost:8080/actuator/health/readiness)
+- 供应商：[健康检查](http://localhost:8090/actuator/health)
+- 演示账号：`admin-demo`、`user-demo`，密码见 `.env`。
 
-```powershell
-.\scripts\demo-flow.ps1
-```
-
-<details>
-<summary><strong>供应商履约与故障恢复演示</strong></summary>
-
-完成配置初始化后，停止已运行的主应用，启动供应商数据库与 RocketMQ：
-
-```powershell
-.\scripts\dev-up.ps1 -Supplier
-```
-
-分别在两个终端启动模拟器与主应用。模拟器使用 `8090` 端口，`-Faults` 开启本次演示所需的故障控制：
-
-```powershell
-# 终端一
-.\scripts\run-supplier.ps1 -Faults
-
-# 终端二
-.\scripts\run-app.ps1 -Supplier
-```
-
-在第三个终端执行演示，验证响应丢失后的查单恢复、明确拒绝后的库存释放及最终对账：
-
-```powershell
-.\scripts\demo-supplier.ps1
-```
-
-</details>
-
-<details>
-<summary><strong>完整容器运行</strong></summary>
-
-完成配置初始化并停止宿主机应用后，先构建 JAR，再启动应用、模拟器及依赖容器：
-
-```powershell
-.\scripts\verify.ps1
-.\scripts\container-up.ps1 -Build
-```
-
-容器配置与运行方式见[运行手册](docs/operations.md#容器运行)。
-
-</details>
+项目提供 HTTP API，没有前端首页。运行环境配置与日志命令见[运行手册](docs/operations.md)。
 
 ## 测试验证
 
-| 命令                             | 验证内容                                                               |
-| -------------------------------- | ---------------------------------------------------------------------- |
-| `.\scripts\verify.ps1`           | 主应用与模拟器的编译、单元测试、架构约束、MySQL / Redis 集成测试及打包 |
-| `.\scripts\verify-messaging.ps1` | RocketMQ 发送、消费、死信与重放                                        |
-| `.\scripts\verify-recovery.ps1`  | 独立进程中断与重启后的任务恢复                                         |
-| `.\scripts\demo-repair.ps1`      | 隔离环境中的差异扫描、修复与命令重放                                   |
+在 PowerShell 7 中执行；若脚本受签名策略限制，使用 `pwsh -NoProfile -ExecutionPolicy Bypass -File <脚本> <参数>`。
 
-性能场景见 [perf/](perf/)，采样入口为 [measure-detail.ps1](scripts/measure-detail.ps1) 与 [measure-claim.ps1](scripts/measure-claim.ps1)。
+```powershell
+.\scripts\verify.ps1                  # 编译、单元/集成测试、格式检查、打包
+.\scripts\verify.ps1 -Suite Messaging # RocketMQ 发送、消费和发布故障
+.\scripts\verify.ps1 -Suite Recovery  # 进程中断恢复及跨进程协作
+.\scripts\verify.ps1 -Suite Repair    # HTTP 对账修复与幂等回放
+.\scripts\format.ps1 -Check           # 格式检查；不加 -Check 则格式化
+.\scripts\demo-flow.ps1               # 本地领取、核销、库存对账
+.\scripts\demo-supplier.ps1           # 供应商故障恢复；启动时需 -Faults
+```
+
+启动只打包，不执行测试。Java 排版由 Spotless/google-java-format 统一，配置见两个模块的 `pom.xml`；已应用的 Flyway 迁移保持不变。
 
 ## 文档
 
 - [API 参考](docs/api.md)：认证、接口、状态与错误码。
 - [供应商协议](docs/supplier-contract.md)：幂等请求、查单、签名回调与故障控制。
-- [运行手册](docs/operations.md)：环境配置、监控、部署、备份恢复与容量边界。
+- [运行手册](docs/operations.md)：环境配置、监控、备份恢复、死信重放与性能采样。
 
 ## 开源协议
 

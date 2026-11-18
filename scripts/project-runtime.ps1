@@ -1,4 +1,4 @@
-# 将 Maven 仓库和临时目录限定在项目内，并统一校验测试报告。
+﻿# 将 Maven 仓库和临时目录限定在项目内，并统一校验测试报告。
 function Invoke-ProjectMaven {
     param(
         [Parameter(Mandatory)][string[]]$MavenArguments,

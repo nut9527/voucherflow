@@ -1,4 +1,4 @@
-# 等待 RocketMQ 注册完成，再创建业务主题和消费者组。
+﻿# 等待 RocketMQ 注册完成，再创建业务主题和消费者组。
 param([string[]]$ComposeFiles = @('compose.yaml'),
     [ValidatePattern('^[a-z0-9][a-z0-9_-]{0,62}$')][string]$Project = 'voucherflow-local')
 $ErrorActionPreference = 'Stop'

@@ -1,18 +1,19 @@
 package com.example.voucherflow.common;
 
-import jakarta.validation.ConstraintViolationException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.MissingServletRequestParameterException;
-import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.HandlerMethodValidationException;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
+
+import jakarta.validation.ConstraintViolationException;
 
 /** 统一转换业务异常、参数错误和未处理异常，保持接口错误格式一致。 */
 @RestControllerAdvice
@@ -25,9 +26,14 @@ public class GlobalExceptionHandler {
                 .body(ApiResponse.error(ex.code().name(), ex.getMessage()));
     }
 
-    @ExceptionHandler({MethodArgumentNotValidException.class, ConstraintViolationException.class,
-            HttpMessageNotReadableException.class, MethodArgumentTypeMismatchException.class,
-            MissingServletRequestParameterException.class, HandlerMethodValidationException.class})
+    @ExceptionHandler({
+            MethodArgumentNotValidException.class,
+            ConstraintViolationException.class,
+            HttpMessageNotReadableException.class,
+            MethodArgumentTypeMismatchException.class,
+            MissingServletRequestParameterException.class,
+            HandlerMethodValidationException.class
+    })
     ResponseEntity<ApiResponse<Void>> handleValidation() {
         return error(ErrorCode.VALIDATION_ERROR);
     }
@@ -49,6 +55,7 @@ public class GlobalExceptionHandler {
     }
 
     private ResponseEntity<ApiResponse<Void>> error(ErrorCode code) {
-        return ResponseEntity.status(code.httpStatus()).body(ApiResponse.error(code.name(), code.defaultMessage()));
+        return ResponseEntity.status(code.httpStatus())
+                .body(ApiResponse.error(code.name(), code.defaultMessage()));
     }
 }

@@ -17,7 +17,9 @@ public class AuthController {
     /** 返回当前会话的 CSRF 凭证，供客户端后续提交写请求。 */
     @GetMapping("/api/auth/csrf")
     public ApiResponse<AuthDtos.Csrf> csrf(CsrfToken token) {
-        return ApiResponse.ok(new AuthDtos.Csrf(token.getHeaderName(), token.getParameterName(), token.getToken()));
+        return ApiResponse.ok(
+                new AuthDtos.Csrf(
+                        token.getHeaderName(), token.getParameterName(), token.getToken()));
     }
 
     @GetMapping("/api/auth/me")

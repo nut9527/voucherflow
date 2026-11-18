@@ -1,10 +1,15 @@
-# 初始化项目本地连接配置及随机凭证，已有配置仅补充缺失项。
+﻿# 初始化项目本地连接配置及随机凭证，已有配置仅补充缺失项。
 $ErrorActionPreference = 'Stop'
 $projectRoot = Split-Path -Parent $PSScriptRoot
 $envPath = Join-Path $projectRoot '.env'
 
 function New-LocalPassword {
-    return [Convert]::ToBase64String([Security.Cryptography.RandomNumberGenerator]::GetBytes(24))
+    $bytes = New-Object byte[] 24
+    $random = [Security.Cryptography.RandomNumberGenerator]::Create()
+    try {
+        $random.GetBytes($bytes)
+        return [Convert]::ToBase64String($bytes)
+    } finally { $random.Dispose() }
 }
 
 $lines = @(

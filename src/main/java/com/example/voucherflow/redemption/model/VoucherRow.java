@@ -1,7 +1,6 @@
 package com.example.voucherflow.redemption.model;
 
 import java.time.Instant;
-import com.example.voucherflow.campaign.model.FulfillmentMode;
 
 /** 券持久化与查询模型，关联来源订单、所属用户和供应商券引用。 */
 public class VoucherRow {
@@ -16,33 +15,83 @@ public class VoucherRow {
     private Instant usedAt;
     private String supplierVoucherRef;
 
-    public Long getId() { return id; }
-    public void setId(Long id) { this.id = id; }
+    public Long getId() {
+        return id;
+    }
 
-    public long getOrderId() { return orderId; }
-    public void setOrderId(long orderId) { this.orderId = orderId; }
+    public void setId(Long id) {
+        this.id = id;
+    }
 
-    public long getCampaignId() { return campaignId; }
-    public void setCampaignId(long campaignId) { this.campaignId = campaignId; }
+    public long getOrderId() {
+        return orderId;
+    }
 
-    public long getUserId() { return userId; }
-    public void setUserId(long userId) { this.userId = userId; }
+    public void setOrderId(long orderId) {
+        this.orderId = orderId;
+    }
 
-    public String getCampaignName() { return campaignName; }
-    public void setCampaignName(String campaignName) { this.campaignName = campaignName; }
+    public long getCampaignId() {
+        return campaignId;
+    }
 
-    public VoucherStatus getStatus() { return status; }
-    public void setStatus(VoucherStatus status) { this.status = status; }
+    public void setCampaignId(long campaignId) {
+        this.campaignId = campaignId;
+    }
 
-    public Instant getIssuedAt() { return issuedAt; }
-    public void setIssuedAt(Instant issuedAt) { this.issuedAt = issuedAt; }
+    public long getUserId() {
+        return userId;
+    }
 
-    public Instant getExpiresAt() { return expiresAt; }
-    public void setExpiresAt(Instant expiresAt) { this.expiresAt = expiresAt; }
+    public void setUserId(long userId) {
+        this.userId = userId;
+    }
 
-    public Instant getUsedAt() { return usedAt; }
-    public void setUsedAt(Instant usedAt) { this.usedAt = usedAt; }
+    public String getCampaignName() {
+        return campaignName;
+    }
 
-    public String getSupplierVoucherRef() { return supplierVoucherRef; }
-    public void setSupplierVoucherRef(String supplierVoucherRef) { this.supplierVoucherRef = supplierVoucherRef; }
+    public void setCampaignName(String campaignName) {
+        this.campaignName = campaignName;
+    }
+
+    public VoucherStatus getStatus() {
+        return status;
+    }
+
+    public void setStatus(VoucherStatus status) {
+        this.status = status;
+    }
+
+    public Instant getIssuedAt() {
+        return issuedAt;
+    }
+
+    public void setIssuedAt(Instant issuedAt) {
+        this.issuedAt = issuedAt;
+    }
+
+    public Instant getExpiresAt() {
+        return expiresAt;
+    }
+
+    public void setExpiresAt(Instant expiresAt) {
+        this.expiresAt = expiresAt;
+    }
+
+    public Instant getUsedAt() {
+        return usedAt;
+    }
+
+    public void setUsedAt(Instant usedAt) {
+        this.usedAt = usedAt;
+    }
+
+    public String getSupplierVoucherRef() {
+        return supplierVoucherRef;
+    }
+
+    public void setSupplierVoucherRef(String supplierVoucherRef) {
+        this.supplierVoucherRef = supplierVoucherRef;
+    }
 }

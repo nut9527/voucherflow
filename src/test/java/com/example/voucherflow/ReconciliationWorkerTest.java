@@ -1,5 +1,18 @@
 package com.example.voucherflow;
 
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
+import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
+import static org.mockito.Mockito.when;
+
 import com.example.voucherflow.fulfillment.ReceiptEvidence;
 import com.example.voucherflow.fulfillment.SupplierEvidenceService;
 import com.example.voucherflow.outbox.OutboxRecoveryQuery;
@@ -23,9 +36,6 @@ import org.springframework.transaction.support.SimpleTransactionStatus;
 import org.springframework.transaction.support.TransactionTemplate;
 import tools.jackson.databind.ObjectMapper;
 
-import static org.mockito.ArgumentMatchers.*;
-import static org.mockito.Mockito.*;
-
 /** 验证扫描沿用持久化快照与固定上界，并在租约或时间预算耗尽时保留正确进度。 */
 class ReconciliationWorkerTest {
     private final ReconciliationStore store = mock(ReconciliationStore.class);
@@ -41,8 +51,16 @@ class ReconciliationWorkerTest {
         var manager = mock(PlatformTransactionManager.class);
         when(manager.getTransaction(any())).thenReturn(new SimpleTransactionStatus());
         when(clock.instant()).thenAnswer(call -> now.get());
-        return new ReconciliationWorker(store, supplier, outbox, local, new DifferenceClassifier(),
-                new TransactionTemplate(manager), new ObjectMapper(), properties, clock);
+        return new ReconciliationWorker(
+                store,
+                supplier,
+                outbox,
+                local,
+                new DifferenceClassifier(),
+                new TransactionTemplate(manager),
+                new ObjectMapper(),
+                properties,
+                clock);
     }
 
     @Test
@@ -87,9 +105,13 @@ class ReconciliationWorkerTest {
     void losingLeaseDuringBatchStopsRemoteQueriesAndDiscardsUncommittedFindings() {
         var lease = new Lease(1, 2, 0, 11, "lease", new Accounting(true, observedAt));
         when(store.renew(lease)).thenReturn(true, true, false);
-        when(store.page(lease)).thenReturn(LongStream.rangeClosed(1, 11)
-                .mapToObj(id -> order(id, "SUPPLIER")).toList());
-        when(supplier.observe(anyLong())).thenReturn(new ReceiptEvidence(0, "UNAVAILABLE", null, null));
+        when(store.page(lease))
+                .thenReturn(
+                        LongStream.rangeClosed(1, 11)
+                                .mapToObj(id -> order(id, "SUPPLIER"))
+                                .toList());
+        when(supplier.observe(anyLong()))
+                .thenReturn(new ReceiptEvidence(0, "UNAVAILABLE", null, null));
         when(store.order(anyLong())).thenAnswer(call -> order(call.getArgument(0), "SUPPLIER"));
 
         worker().process(lease);
@@ -108,14 +130,19 @@ class ReconciliationWorkerTest {
         var second = new Lease(1, 2, 2, 3, "second", accounting);
         when(store.renew(any())).thenReturn(true);
         when(store.owns(any())).thenReturn(true);
-        when(store.page(first)).thenReturn(LongStream.rangeClosed(1, 3)
-                .mapToObj(id -> order(id, "SUPPLIER")).toList());
+        when(store.page(first))
+                .thenReturn(
+                        LongStream.rangeClosed(1, 3)
+                                .mapToObj(id -> order(id, "SUPPLIER"))
+                                .toList());
         when(store.page(second)).thenReturn(List.of(order(3, "SUPPLIER")));
         when(store.order(anyLong())).thenAnswer(call -> order(call.getArgument(0), "SUPPLIER"));
-        when(supplier.observe(anyLong())).thenAnswer(call -> {
-            now.updateAndGet(instant -> instant.plusSeconds(15));
-            return new ReceiptEvidence(0, "UNAVAILABLE", null, null);
-        });
+        when(supplier.observe(anyLong()))
+                .thenAnswer(
+                        call -> {
+                            now.updateAndGet(instant -> instant.plusSeconds(15));
+                            return new ReceiptEvidence(0, "UNAVAILABLE", null, null);
+                        });
 
         var worker = worker();
         worker.process(first);
@@ -135,7 +162,7 @@ class ReconciliationWorkerTest {
     }
 
     private Observation order(long id, String mode) {
-        return new Observation(id, 2, 0, "FULFILLED", mode, "DONE", 0,
-                observedAt.plusSeconds(3600), observedAt);
+        return new Observation(
+                id, 2, 0, "FULFILLED", mode, "DONE", 0, observedAt.plusSeconds(3600), observedAt);
     }
 }

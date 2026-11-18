@@ -1,5 +1,15 @@
 package com.example.voucherflow;
 
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
+import static org.mockito.Mockito.when;
+
 import com.example.voucherflow.campaign.CampaignPolicy;
 import com.example.voucherflow.campaign.CampaignReadService;
 import com.example.voucherflow.campaign.CampaignService;
@@ -16,7 +26,6 @@ import com.example.voucherflow.fulfillment.FulfillmentProperties;
 import com.example.voucherflow.fulfillment.SupplierStore;
 import com.example.voucherflow.identity.CurrentUser;
 import com.example.voucherflow.inventory.InventoryService;
-import com.example.voucherflow.inventory.mapper.InventoryMapper;
 import com.example.voucherflow.issuance.ClaimService;
 import com.example.voucherflow.issuance.mapper.OrderMapper;
 import com.example.voucherflow.issuance.model.FulfillmentStatus;
@@ -30,8 +39,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
-import static org.assertj.core.api.Assertions.*;
-import static org.mockito.Mockito.*;
 
 /** 验证停止事件发布后禁止创建新供应商业务，但已存在订单仍可幂等返回。 */
 class SupplierAdmissionTest {
@@ -42,13 +49,25 @@ class SupplierAdmissionTest {
     private final OutboxEventService outbox = mock(OutboxEventService.class);
     private final MessagingProperties messaging = mock(MessagingProperties.class);
     private final FulfillmentProperties fulfillment = new FulfillmentProperties();
-    private final TransactionTemplate tx = new TransactionTemplate(mock(PlatformTransactionManager.class));
+    private final TransactionTemplate tx =
+            new TransactionTemplate(mock(PlatformTransactionManager.class));
     private final CampaignRow campaign = new CampaignRow();
-    private final ClaimService claims = new ClaimService(currentUser, campaigns, orders, inventory,
-            mock(InventoryMapper.class), mock(FulfillmentFinalizer.class), tx, fulfillment,
-            mock(FulfillmentEventFactory.class), outbox, mock(SupplierStore.class), messaging);
+    private final ClaimService claims =
+            new ClaimService(
+                    currentUser,
+                    campaigns,
+                    orders,
+                    inventory,
+                    mock(FulfillmentFinalizer.class),
+                    tx,
+                    fulfillment,
+                    mock(FulfillmentEventFactory.class),
+                    outbox,
+                    mock(SupplierStore.class),
+                    messaging);
 
-    @BeforeEach void setup() {
+    @BeforeEach
+    void setup() {
         fulfillment.setEnabled(true);
         when(messaging.enabled()).thenReturn(true);
         when(currentUser.requireUserId()).thenReturn(42L);
@@ -66,25 +85,54 @@ class SupplierAdmissionTest {
         when(campaigns.lockById(1)).thenReturn(Optional.of(campaign));
     }
 
-    @Test void pausedPublisherRejectsCampaignPublication() {
-        var service = new CampaignService(campaigns, new CampaignPolicy(), currentUser, Clock.systemUTC(),
-                tx, mock(CampaignReadService.class), mock(CampaignCacheInvalidator.class), fulfillment, messaging);
-        assertThatThrownBy(() -> service.publish(1)).isInstanceOfSatisfying(BusinessException.class,
-                error -> assertThat(error.code()).isEqualTo(ErrorCode.INVALID_CAMPAIGN_STATE));
+    @Test
+    void pausedPublisherRejectsCampaignPublication() {
+        var service =
+                new CampaignService(
+                        campaigns,
+                        new CampaignPolicy(),
+                        currentUser,
+                        Clock.systemUTC(),
+                        tx,
+                        mock(CampaignReadService.class),
+                        mock(CampaignCacheInvalidator.class),
+                        fulfillment,
+                        messaging);
+        assertThatThrownBy(() -> service.publish(1))
+                .isInstanceOfSatisfying(
+                        BusinessException.class,
+                        error ->
+                                assertThat(error.code())
+                                        .isEqualTo(ErrorCode.INVALID_CAMPAIGN_STATE));
         verify(campaigns, never()).publishDraft(anyLong());
     }
 
-    @Test void pausedPublisherRejectsClaimBeforeReservingStock() {
+    @Test
+    void pausedPublisherRejectsClaimBeforeReservingStock() {
         campaign.setStatus(CampaignStatus.ACTIVE);
-        assertThatThrownBy(() -> claims.claim(1)).isInstanceOfSatisfying(BusinessException.class,
-                error -> assertThat(error.code()).isEqualTo(ErrorCode.SYSTEM_BUSY));
+        assertThatThrownBy(() -> claims.claim(1))
+                .isInstanceOfSatisfying(
+                        BusinessException.class,
+                        error -> assertThat(error.code()).isEqualTo(ErrorCode.SYSTEM_BUSY));
         verifyNoInteractions(inventory, outbox);
         verify(orders, never()).insert(any());
     }
 
-    @Test void pausedPublisherStillReplaysExistingOrder() {
-        when(orders.findByCampaignAndUser(1, 42)).thenReturn(Optional.of(new OrderView(
-                7, 1, 42, "暂停发布", FulfillmentStatus.PENDING, null, Instant.MAX, Instant.EPOCH, null)));
+    @Test
+    void pausedPublisherStillReplaysExistingOrder() {
+        when(orders.findByCampaignAndUser(1, 42))
+                .thenReturn(
+                        Optional.of(
+                                new OrderView(
+                                        7,
+                                        1,
+                                        42,
+                                        "暂停发布",
+                                        FulfillmentStatus.PENDING,
+                                        null,
+                                        Instant.MAX,
+                                        Instant.EPOCH,
+                                        null)));
         var replay = claims.claim(1);
         assertThat(replay.orderId()).isEqualTo("7");
         assertThat(replay.replayed()).isTrue();

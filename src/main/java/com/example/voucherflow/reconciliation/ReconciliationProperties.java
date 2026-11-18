@@ -21,7 +21,8 @@ public class ReconciliationProperties {
     @PostConstruct
     void validate() {
         if (batchSize < 1 || batchSize > 1000) {
-            throw new IllegalArgumentException("Reconciliation batch size must be between 1 and 1000");
+            throw new IllegalArgumentException(
+                    "Reconciliation batch size must be between 1 and 1000");
         }
     }
 }

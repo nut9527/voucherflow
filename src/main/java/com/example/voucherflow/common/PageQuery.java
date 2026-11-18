@@ -7,5 +7,8 @@ public record PageQuery(long afterId, int size) {
             throw new BusinessException(ErrorCode.VALIDATION_ERROR, "分页大小须为 1–100，游标不能为负数");
         }
     }
-    public PageQuery() { this(0, 20); }
+
+    public PageQuery() {
+        this(0, 20);
+    }
 }

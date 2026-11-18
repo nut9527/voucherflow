@@ -20,8 +20,12 @@ import tools.jackson.databind.ObjectMapper;
 
 /** 将登录、退出、未认证和权限拒绝统一输出为 JSON 响应。 */
 @Component
-public class JsonSecurityHandlers implements AuthenticationSuccessHandler, AuthenticationFailureHandler,
-        AuthenticationEntryPoint, AccessDeniedHandler, LogoutSuccessHandler {
+public class JsonSecurityHandlers
+        implements AuthenticationSuccessHandler,
+                AuthenticationFailureHandler,
+                AuthenticationEntryPoint,
+                AccessDeniedHandler,
+                LogoutSuccessHandler {
     private final ObjectMapper json;
     private final CurrentUser currentUser;
 
@@ -31,33 +35,49 @@ public class JsonSecurityHandlers implements AuthenticationSuccessHandler, Authe
     }
 
     @Override
-    public void onAuthenticationSuccess(HttpServletRequest request, HttpServletResponse response,
-            Authentication authentication) throws IOException {
+    public void onAuthenticationSuccess(
+            HttpServletRequest request, HttpServletResponse response, Authentication authentication)
+            throws IOException {
         writeJson(response, 200, ApiResponse.ok(currentUser.me()));
     }
 
     @Override
-    public void onAuthenticationFailure(HttpServletRequest request, HttpServletResponse response,
-            AuthenticationException exception) throws IOException {
+    public void onAuthenticationFailure(
+            HttpServletRequest request,
+            HttpServletResponse response,
+            AuthenticationException exception)
+            throws IOException {
         writeJson(response, 401, error(ErrorCode.BAD_CREDENTIALS));
     }
 
     @Override
-    public void commence(HttpServletRequest request, HttpServletResponse response,
-            AuthenticationException exception) throws IOException {
+    public void commence(
+            HttpServletRequest request,
+            HttpServletResponse response,
+            AuthenticationException exception)
+            throws IOException {
         writeJson(response, 401, error(ErrorCode.UNAUTHENTICATED));
     }
 
     @Override
-    public void handle(HttpServletRequest request, HttpServletResponse response,
-            AccessDeniedException exception) throws IOException {
-        writeJson(response, 403, error(exception instanceof CsrfException
-                ? ErrorCode.CSRF_INVALID : ErrorCode.FORBIDDEN));
+    public void handle(
+            HttpServletRequest request,
+            HttpServletResponse response,
+            AccessDeniedException exception)
+            throws IOException {
+        writeJson(
+                response,
+                403,
+                error(
+                        exception instanceof CsrfException
+                                ? ErrorCode.CSRF_INVALID
+                                : ErrorCode.FORBIDDEN));
     }
 
     @Override
-    public void onLogoutSuccess(HttpServletRequest request, HttpServletResponse response,
-            Authentication authentication) throws IOException {
+    public void onLogoutSuccess(
+            HttpServletRequest request, HttpServletResponse response, Authentication authentication)
+            throws IOException {
         writeJson(response, 200, ApiResponse.ok(null));
     }
 
@@ -65,7 +85,8 @@ public class JsonSecurityHandlers implements AuthenticationSuccessHandler, Authe
         return ApiResponse.error(code.name(), code.defaultMessage());
     }
 
-    private void writeJson(HttpServletResponse response, int status, Object body) throws IOException {
+    private void writeJson(HttpServletResponse response, int status, Object body)
+            throws IOException {
         response.setStatus(status);
         response.setCharacterEncoding(StandardCharsets.UTF_8.name());
         response.setContentType("application/json");

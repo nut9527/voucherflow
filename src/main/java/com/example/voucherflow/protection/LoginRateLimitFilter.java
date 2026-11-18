@@ -15,18 +15,30 @@ public class LoginRateLimitFilter extends OncePerRequestFilter {
     private final RedisRateLimiter limiter;
     private final ObjectMapper json;
 
-    public LoginRateLimitFilter(RateLimitProperties config, RedisRateLimiter limiter, ObjectMapper json) {
-        this.config = config; this.limiter = limiter; this.json = json;
+    public LoginRateLimitFilter(
+            RateLimitProperties config, RedisRateLimiter limiter, ObjectMapper json) {
+        this.config = config;
+        this.limiter = limiter;
+        this.json = json;
     }
 
-    @Override protected boolean shouldNotFilter(HttpServletRequest request) {
-        return !config.enabled() || !"POST".equals(request.getMethod()) || !"/api/auth/login".equals(request.getServletPath());
+    @Override
+    protected boolean shouldNotFilter(HttpServletRequest request) {
+        return !config.enabled()
+                || !"POST".equals(request.getMethod())
+                || !"/api/auth/login".equals(request.getServletPath());
     }
 
-    @Override protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response,
-            FilterChain chain) throws ServletException, IOException {
+    @Override
+    protected void doFilterInternal(
+            HttpServletRequest request, HttpServletResponse response, FilterChain chain)
+            throws ServletException, IOException {
         try {
-            limiter.acquire("vf:limit:login:" + request.getRemoteAddr(), config.loginLimit(), config.loginWindow(), "login");
+            limiter.acquire(
+                    "vf:limit:login:" + request.getRemoteAddr(),
+                    config.loginLimit(),
+                    config.loginWindow(),
+                    "login");
         } catch (AdmissionException ex) {
             // 此处尚未进入控制器，直接写出与接口层一致的 JSON 错误响应。
             response.setStatus(ex.status());

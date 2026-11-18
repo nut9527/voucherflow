@@ -19,8 +19,10 @@ public class DatabaseUserDetailsService implements UserDetailsService {
     @Override
     public UserDetails loadUserByUsername(String username) {
         // 统一账号的空白与大小写处理，与数据库保存的规范化用户名一致。
-        var user = users.findByUsername(username.trim().toLowerCase(Locale.ROOT))
-                .orElseThrow(() -> new UsernameNotFoundException("Unknown user"));
-        return new LoginPrincipal(user.getId(), user.getUsername(), user.getRole(), user.getPasswordHash());
+        var user =
+                users.findByUsername(username.trim().toLowerCase(Locale.ROOT))
+                        .orElseThrow(() -> new UsernameNotFoundException("Unknown user"));
+        return new LoginPrincipal(
+                user.getId(), user.getUsername(), user.getRole(), user.getPasswordHash());
     }
 }

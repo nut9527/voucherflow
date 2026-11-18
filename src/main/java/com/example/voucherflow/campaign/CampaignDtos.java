@@ -14,37 +14,58 @@ import java.time.Instant;
 public final class CampaignDtos {
     private CampaignDtos() {}
 
-    public record CreateRequest(
+    public record DraftRequest(
             @NotBlank @Size(max = 128) String name,
             @Size(max = 2000) String description,
             @Min(1) @Max(1_000_000_000) int totalStock,
-            @NotNull Instant startAt, @NotNull Instant endAt, @NotNull Instant redeemEndAt,
+            @NotNull Instant startAt,
+            @NotNull Instant endAt,
+            @NotNull Instant redeemEndAt,
             @NotNull FulfillmentMode fulfillmentMode,
-            @Size(max = 64) String supplierId, @Size(max = 128) String productCode,
-            @Size(max = 64) String contractVersion) {}
-
-    public record UpdateRequest(
-            @NotBlank @Size(max = 128) String name,
-            @Size(max = 2000) String description,
-            @Min(1) @Max(1_000_000_000) int totalStock,
-            @NotNull Instant startAt, @NotNull Instant endAt, @NotNull Instant redeemEndAt,
-            @NotNull FulfillmentMode fulfillmentMode,
-            @Size(max = 64) String supplierId, @Size(max = 128) String productCode,
+            @Size(max = 64) String supplierId,
+            @Size(max = 128) String productCode,
             @Size(max = 64) String contractVersion) {}
 
     public record Created(String id) {}
 
-    public record Summary(String id, String name, int totalStock, CampaignStatus status,
-            CampaignPhase phase, Instant startAt, Instant endAt) {}
+    public record Summary(
+            String id,
+            String name,
+            int totalStock,
+            CampaignStatus status,
+            CampaignPhase phase,
+            Instant startAt,
+            Instant endAt) {}
 
-    public record Detail(String id, String name, int totalStock, CampaignStatus status,
-            CampaignPhase phase, Instant startAt, Instant endAt, String description,
-            Instant redeemEndAt, FulfillmentMode fulfillmentMode) {}
+    public record Detail(
+            String id,
+            String name,
+            int totalStock,
+            CampaignStatus status,
+            CampaignPhase phase,
+            Instant startAt,
+            Instant endAt,
+            String description,
+            Instant redeemEndAt,
+            FulfillmentMode fulfillmentMode) {}
 
-    public record AdminDetail(String id, String name, String description, int totalStock,
-            int availableStock, int reservedStock, int issuedStock, CampaignStatus status,
-            Instant startAt, Instant endAt, Instant redeemEndAt, FulfillmentMode fulfillmentMode,
-            String supplierId, String productCode, String contractVersion, String createdBy,
-            Instant createdAt, Instant updatedAt) {}
+    public record AdminDetail(
+            String id,
+            String name,
+            String description,
+            int totalStock,
+            int availableStock,
+            int reservedStock,
+            int issuedStock,
+            CampaignStatus status,
+            Instant startAt,
+            Instant endAt,
+            Instant redeemEndAt,
+            FulfillmentMode fulfillmentMode,
+            String supplierId,
+            String productCode,
+            String contractVersion,
+            String createdBy,
+            Instant createdAt,
+            Instant updatedAt) {}
 }
-

@@ -8,5 +8,7 @@ import org.springframework.context.annotation.Configuration;
 @Configuration(proxyBeanMethods = false)
 public class TimeConfiguration {
     @Bean
-    Clock clock() { return Clock.systemUTC(); }
+    Clock clock() {
+        return Clock.systemUTC();
+    }
 }

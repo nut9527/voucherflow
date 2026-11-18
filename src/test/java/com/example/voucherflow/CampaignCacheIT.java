@@ -1,5 +1,8 @@
 package com.example.voucherflow;
 
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+
 import com.example.voucherflow.campaign.CampaignDtos;
 import com.example.voucherflow.campaign.CampaignService;
 import com.example.voucherflow.campaign.cache.CampaignCacheInvalidator;
@@ -26,13 +29,12 @@ import org.testcontainers.containers.GenericContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
-import static org.assertj.core.api.Assertions.*;
-
 /** 结合真实 MySQL 与 Redis 验证详情缓存、空值缓存及事务提交后的失效行为。 */
 @Testcontainers
 class CampaignCacheIT extends MySqlIntegrationTest {
     @Container
-    static final GenericContainer<?> redisContainer = new GenericContainer<>("redis:7.4.2-alpine").withExposedPorts(6379);
+    static final GenericContainer<?> redisContainer =
+            new GenericContainer<>("redis:7.4.2-alpine").withExposedPorts(6379);
 
     @DynamicPropertySource
     static void redisProperties(DynamicPropertyRegistry registry) {
@@ -49,14 +51,19 @@ class CampaignCacheIT extends MySqlIntegrationTest {
 
     @BeforeEach
     void admin() {
-        long id = jdbc.queryForObject("SELECT id FROM users WHERE username='admin-demo'", Long.class);
+        long id =
+                jdbc.queryForObject("SELECT id FROM users WHERE username='admin-demo'", Long.class);
         var principal = new LoginPrincipal(id, "admin-demo", Role.ADMIN, "unused");
-        SecurityContextHolder.getContext().setAuthentication(
-                UsernamePasswordAuthenticationToken.authenticated(principal, null, principal.getAuthorities()));
+        SecurityContextHolder.getContext()
+                .setAuthentication(
+                        UsernamePasswordAuthenticationToken.authenticated(
+                                principal, null, principal.getAuthorities()));
     }
 
     @AfterEach
-    void clear() { SecurityContextHolder.clearContext(); }
+    void clear() {
+        SecurityContextHolder.clearContext();
+    }
 
     @Test
     void repeatedDetailUsesCacheAndPublishingEvictsNegativeEntry() {
@@ -81,21 +88,36 @@ class CampaignCacheIT extends MySqlIntegrationTest {
         campaigns.publicDetail(id);
         String key = "vf:campaign:detail:v1:" + id;
         String cached = redis.opsForValue().get(key);
-        transaction.executeWithoutResult(status -> {
-            jdbc.update("UPDATE campaigns SET name='uncommitted' WHERE id=?", id);
-            invalidator.evictAfterCommit(id);
-            status.setRollbackOnly();
-        });
+        transaction.executeWithoutResult(
+                status -> {
+                    jdbc.update("UPDATE campaigns SET name='uncommitted' WHERE id=?", id);
+                    invalidator.evictAfterCommit(id);
+                    status.setRollbackOnly();
+                });
         assertThat(redis.opsForValue().get(key)).isEqualTo(cached);
         assertThat(campaigns.publicDetail(id).name()).isNotEqualTo("uncommitted");
     }
 
-    private double reads() { return metrics.counter("voucherflow.cache.database.reads").count(); }
+    private double reads() {
+        return metrics.counter("voucherflow.cache.database.reads").count();
+    }
 
     private long draft() {
         Instant now = Instant.now();
-        return Long.parseLong(campaigns.create(new CampaignDtos.CreateRequest("cache-" + UUID.randomUUID(), "", 10,
-                now.minusSeconds(60), now.plusSeconds(120), now.plusSeconds(240),
-                FulfillmentMode.LOCAL, null, null, null)).id());
+        return Long.parseLong(
+                campaigns
+                        .create(
+                                new CampaignDtos.DraftRequest(
+                                        "cache-" + UUID.randomUUID(),
+                                        "",
+                                        10,
+                                        now.minusSeconds(60),
+                                        now.plusSeconds(120),
+                                        now.plusSeconds(240),
+                                        FulfillmentMode.LOCAL,
+                                        null,
+                                        null,
+                                        null))
+                        .id());
     }
 }

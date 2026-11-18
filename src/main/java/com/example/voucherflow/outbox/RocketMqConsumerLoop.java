@@ -27,41 +27,72 @@ public class RocketMqConsumerLoop {
     private volatile long retryAfterNanos;
     private volatile boolean initialized;
 
-    public RocketMqConsumerLoop(String group, SimpleConsumer consumer, Consumer<MessageView> handler,
-            ExecutorService executor, int capacity, Duration invisible) {
+    public RocketMqConsumerLoop(
+            String group,
+            SimpleConsumer consumer,
+            Consumer<MessageView> handler,
+            ExecutorService executor,
+            int capacity,
+            Duration invisible) {
         this(group, consumer, handler, executor, capacity, invisible, (point, identity) -> {});
     }
-    public RocketMqConsumerLoop(String group, SimpleConsumer consumer, Consumer<MessageView> handler,
-            ExecutorService executor, int capacity, Duration invisible, com.example.voucherflow.common.ExecutionProbe probe) {
-        this.group = group; this.consumer = consumer; this.handler = handler; this.executor = executor;
-        this.slots = new Semaphore(capacity); this.invisible = invisible;
+
+    public RocketMqConsumerLoop(
+            String group,
+            SimpleConsumer consumer,
+            Consumer<MessageView> handler,
+            ExecutorService executor,
+            int capacity,
+            Duration invisible,
+            com.example.voucherflow.common.ExecutionProbe probe) {
+        this.group = group;
+        this.consumer = consumer;
+        this.handler = handler;
+        this.executor = executor;
+        this.slots = new Semaphore(capacity);
+        this.invisible = invisible;
         this.probe = probe;
     }
+
     /** 拉取数量不超过当前可用额度，失败退避期间暂停新一轮拉取。 */
     public void receiveTick() {
-        if (stopping || System.nanoTime() < retryAfterNanos || !receiving.compareAndSet(false, true)) { return; }
+        if (stopping
+                || System.nanoTime() < retryAfterNanos
+                || !receiving.compareAndSet(false, true)) {
+            return;
+        }
         int held = 0;
         try {
-            while (held < 10 && slots.tryAcquire()) { held++; }
-            if (held == 0) { return; }
+            while (held < 10 && slots.tryAcquire()) {
+                held++;
+            }
+            if (held == 0) {
+                return;
+            }
             // 拉取后消息即进入不可见期，先取得处理额度，减少消息在本地排队耗尽不可见期的风险。
             var messages = consumer.receive(held, invisible);
             initialized = true;
             slots.release(held - messages.size());
             held = messages.size();
             for (var message : messages) {
-                if (stopping) { break; }
+                if (stopping) {
+                    break;
+                }
                 executor.execute(() -> process(message));
                 held--;
             }
         } catch (Exception ex) {
             retryAfterNanos = System.nanoTime() + Duration.ofSeconds(5).toNanos();
-            log.warn("Message receive failed group={} category={}", group, ex.getClass().getSimpleName());
+            log.warn(
+                    "Message receive failed group={} category={}",
+                    group,
+                    ex.getClass().getSimpleName());
         } finally {
             slots.release(held);
             receiving.set(false);
         }
     }
+
     private void process(MessageView message) {
         try {
             // 业务处理及其事务先完成，再确认消息；失败时保留消息等待重新投递。
@@ -78,19 +109,37 @@ public class RocketMqConsumerLoop {
         } catch (Exception ex) {
             // 业务已提交而确认失败时仍会重新投递，重复副作用由业务事务中的消费去重记录阻止。
             retryAfterNanos = System.nanoTime() + Duration.ofSeconds(2).toNanos();
-            log.warn("Message processing failed group={} messageId={} delivery={} category={}",
-                    group, message.getMessageId(), message.getDeliveryAttempt(), ex.getClass().getSimpleName());
-        } finally { slots.release(); }
+            log.warn(
+                    "Message processing failed group={} messageId={} delivery={} category={}",
+                    group,
+                    message.getMessageId(),
+                    message.getDeliveryAttempt(),
+                    ex.getClass().getSimpleName());
+        } finally {
+            slots.release();
+        }
     }
-    public boolean initialized() { return initialized; }
-    public void stop() { stopping = true; }
+
+    public boolean initialized() {
+        return initialized;
+    }
+
+    public void stop() {
+        stopping = true;
+    }
+
     /** 关闭客户端与消息确认共用锁，避免关闭过程和确认操作交错。 */
     public void closeClient() {
         synchronized (lifecycle) {
-            if (closed) { return; }
+            if (closed) {
+                return;
+            }
             closed = true;
-            try { consumer.close(); }
-            catch (Exception ex) { log.warn("Message client close failed group={}", group); }
+            try {
+                consumer.close();
+            } catch (Exception ex) {
+                log.warn("Message client close failed group={}", group);
+            }
         }
     }
 }
